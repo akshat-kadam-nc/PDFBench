@@ -1,11 +1,27 @@
 # DeskewPDF
 
-Local full-stack tool that straightens scanned PDFs where odd and even pages
-tilt in opposite directions (predictable ADF scanner skew).
+Local full-stack tool to prepare scanned book chapters: **straighten** the
+predictable ADF-scanner tilt, **compress** each chapter, and **merge** the
+chapters into the finished book.
 
-Drag a PDF into the page, and the corrected file downloads automatically. Each
-page is rotated around its center as a **lossless PDF transform** — the scanned
-image is not re-encoded and any OCR text layer stays selectable and aligned.
+Two tabs:
+
+- **Deskew & Compress** — drop one chapter PDF. Deskew rotates each page around
+  its center as a **lossless transform** (scan image not re-encoded, OCR text
+  layer stays selectable). Compress downsamples the page image to a target DPI
+  and re-encodes it, deciding color per page automatically: pages that are
+  basically black text become grayscale, pages with color figures stay color.
+- **Merge** — drop all the processed chapters, order them (auto-sorted by
+  filename), and combine into one PDF. Lossless. Tells you if the result is
+  under 10 MB.
+
+### Size expectations
+
+300 pages of textured color textbook scans won't fit under 10 MB in one file at
+readable quality — that needs JBIG2/MRC, which harms color diagrams. At the
+default 120 DPI adaptive settings expect roughly 20–30 MB for the whole book.
+Lower the DPI (e.g. 100) for smaller files, or split the book into volumes with
+the Merge tab if you need each file under a hard cap.
 
 ## Run it
 
