@@ -46,14 +46,44 @@ Controls in the UI:
 The result table shows, per page, the measured and applied angle plus which
 method was used, so a large batch is easy to trust at a glance.
 
+## Deploy to Render (shareable URL)
+
+No database required — the tool is stateless. The repo is containerized
+(`Dockerfile`) and includes a Render Blueprint (`render.yaml`).
+
+1. Push this repo to GitHub.
+2. In Render: **New + → Blueprint**, pick the repo. It reads `render.yaml` and
+   creates a Docker web service on the free plan.
+3. Wait for the build (a few minutes), then open the service URL and share it.
+
+Notes:
+- **Free plan sleeps when idle** — the first request after a lull takes ~30–60s
+  to wake, then it's fast.
+- Free plan has 512 MB RAM; processing one chapter at a time stays well within
+  it. Deskew/compress a big chapter, not the whole 300-page book at once.
+- Not a fit for Vercel: its serverless functions cap request bodies at ~4.5 MB
+  (chapters are larger) and limit execution time. Render runs it as a normal
+  long-lived server with no such caps.
+
+Run the container locally to test:
+
+```
+docker build -t deskewpdf .
+docker run -p 8000:8000 deskewpdf   # then open http://localhost:8000
+```
+
 ## Layout
 
 ```
 DeskewPDF/
-  run.bat                 launcher (double-click)
+  run.bat                 local launcher (double-click)
+  Dockerfile              container for Render / Railway / Fly.io
+  render.yaml             Render Blueprint
   server/
-    main.py               FastAPI app: serves the UI + /api/deskew
-    deskew_core.py        rotation + skew-detection logic
+    main.py               FastAPI app: serves UI + /api/process + /api/merge
+    deskew_core.py        rotation + skew detection
+    compress_core.py      per-page adaptive image recompression
+    merge_core.py         lossless PDF merge
     requirements.txt
   web/
     index.html            React single-page frontend (drag & drop)

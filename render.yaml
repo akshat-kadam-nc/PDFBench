@@ -1,0 +1,9 @@
+# Render Blueprint. In Render: New + -> Blueprint -> point at this repo.
+services:
+  - type: web
+    name: deskewpdf
+    runtime: docker
+    plan: free            # free tier sleeps when idle; wakes on first request
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true      # redeploy on every push to the connected branch

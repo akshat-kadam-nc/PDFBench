@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+*_deskewed.pdf
+*_deskew*.pdf
+scratch/
+README.md
