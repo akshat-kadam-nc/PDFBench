@@ -73,6 +73,31 @@
 const {useState, useCallback, useRef} = React;
 const MB = b => (b/1e6).toFixed(2)+" MB";
 
+// Pull a useful message out of a failed response (handles empty statusText on
+// HTTP/2, non-JSON error bodies from the proxy, and OOM/timeout cases).
+async function errorFromResponse(res){
+  let detail="";
+  try{
+    const ct=res.headers.get("content-type")||"";
+    if(ct.includes("application/json")){ const j=await res.json(); detail=j.detail||JSON.stringify(j); }
+    else { detail=(await res.text()||"").slice(0,300); }
+  }catch(_){}
+  const hints={502:"the server likely crashed or ran out of memory",
+               503:"the server is starting up or overloaded (free tier wakes from sleep — retry in ~30s)",
+               504:"processing took too long and timed out",
+               413:"the file is too large",507:"the server ran out of memory"};
+  const hint=hints[res.status];
+  let msg=`HTTP ${res.status}`+(res.statusText?" "+res.statusText:"");
+  if(detail) msg+=`: ${detail}`;
+  else if(hint) msg+=` — ${hint}`;
+  return new Error(msg);
+}
+function describeError(e){
+  if(e instanceof TypeError) // fetch network failure
+    return "Could not reach the server. It may be restarting (free tier wakes from sleep) or was killed mid-request — wait ~30s and retry.";
+  return String(e.message||e||"Unknown error");
+}
+
 function Drop({busy, label, sub, accept, multiple, onFiles}){
   const [hover,setHover]=useState(false);
   const ref=useRef();
@@ -120,14 +145,14 @@ function ProcessTab(){
       fd.append("dpi",dpi||"110"); fd.append("quality_color",qc||"52");
       fd.append("quality_gray",qg||"45"); fd.append("color_mode",colorMode);
       const res=await fetch("/api/process",{method:"POST",body:fd});
-      if(!res.ok) throw new Error((await res.json().catch(()=>({}))).detail||res.statusText);
+      if(!res.ok) throw await errorFromResponse(res);
       const report=JSON.parse(res.headers.get("X-Report")||"{}");
       const blob=await res.blob();
       const url=URL.createObjectURL(blob);
       const filename=(file.name.replace(/\.pdf$/i,""))+"_"+(report.steps||["out"]).join("_")+".pdf";
       setResult({report,url,filename});
       const a=document.createElement("a");a.href=url;a.download=filename;a.click();
-    }catch(e){setErr(String(e.message||e));}
+    }catch(e){setErr(describeError(e));}
     finally{setBusy(false);}
   },[deskew,compress,dpi,qc,qg,colorMode,mode,dir]);
 
@@ -232,13 +257,13 @@ function MergeTab(){
       items.forEach(it=>fd.append("files",it.file));
       fd.append("name",name||"book");
       const res=await fetch("/api/merge",{method:"POST",body:fd});
-      if(!res.ok) throw new Error((await res.json().catch(()=>({}))).detail||res.statusText);
+      if(!res.ok) throw await errorFromResponse(res);
       const report=JSON.parse(res.headers.get("X-Report")||"{}");
       const blob=await res.blob();const url=URL.createObjectURL(blob);
       const filename=(name||"book")+".pdf";
       setResult({report,url,filename});
       const a=document.createElement("a");a.href=url;a.download=filename;a.click();
-    }catch(e){setErr(String(e.message||e));}
+    }catch(e){setErr(describeError(e));}
     finally{setBusy(false);}
   },[items,name]);
 

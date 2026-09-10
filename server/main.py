@@ -2,20 +2,56 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .deskew_core import Options as DeskewOptions, deskew_pdf_bytes
 from .compress_core import CompressOptions, compress_pdf_bytes
 from .merge_core import merge_pdfs
 
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+log = logging.getLogger("deskewpdf")
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(os.path.dirname(HERE), "web")
 
+# Guard rails
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "80"))
+
 app = FastAPI(title="DeskewPDF")
+
+
+def _peak_mem_mb() -> float | None:
+    """Peak resident memory of this process, in MB (Linux/Mac). None on Windows."""
+    try:
+        import resource  # not available on Windows
+        kb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return kb / 1024.0  # ru_maxrss is in KB on Linux
+    except Exception:  # noqa: BLE001
+        return None
+
+
+@app.middleware("http")
+async def access_log(request: Request, call_next):
+    start = time.time()
+    try:
+        resp = await call_next(request)
+    except Exception:  # noqa: BLE001 — last-resort net so the client gets JSON, not a bare 500
+        log.exception("Unhandled error: %s %s", request.method, request.url.path)
+        return JSONResponse(status_code=500,
+                            content={"detail": "Internal server error (see server logs)."})
+    if request.url.path.startswith("/api"):
+        log.info("%s %s -> %s (%.0f ms)", request.method, request.url.path,
+                 resp.status_code, (time.time() - start) * 1000)
+    return resp
 
 
 def _pdf_response(out: bytes, filename: str, report: dict) -> Response:
@@ -30,17 +66,25 @@ def _pdf_response(out: bytes, filename: str, report: dict) -> Response:
     )
 
 
+def _check_size(name: str, data: bytes):
+    if not data:
+        raise HTTPException(400, f"{name} is empty.")
+    mb = len(data) / 1_048_576
+    if mb > MAX_UPLOAD_MB:
+        raise HTTPException(
+            413, f"{name} is {mb:.0f} MB, over the {MAX_UPLOAD_MB} MB limit. "
+                 f"Split it into smaller chapters, or raise MAX_UPLOAD_MB / server RAM.")
+
+
 @app.post("/api/process")
 async def process(
     file: UploadFile = File(...),
     deskew: bool = Form(True),
     compress: bool = Form(False),
-    # deskew params
     mode: str = Form("hybrid"),
     base: float = Form(1.4),
     odd_sign: float = Form(-1.0),
     even_sign: float = Form(1.0),
-    # compress params
     dpi: int = Form(110),
     quality_color: int = Form(52),
     quality_gray: int = Form(45),
@@ -49,36 +93,54 @@ async def process(
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Please upload a .pdf file.")
     data = await file.read()
-    if not data:
-        raise HTTPException(400, "Empty file.")
-
+    _check_size(file.filename, data)
     in_bytes = len(data)
+    log.info("process start: file=%s size=%.1fMB deskew=%s compress=%s dpi=%s q=%s/%s color=%s",
+             file.filename, in_bytes / 1e6, deskew, compress, dpi, quality_color, quality_gray, color_mode)
+
     report: dict = {"steps": []}
     try:
         if deskew:
+            t = time.time()
             data, dsrep = deskew_pdf_bytes(
-                data, DeskewOptions(mode=mode, base=base, odd_sign=odd_sign, even_sign=even_sign)
-            )
+                data, DeskewOptions(mode=mode, base=base, odd_sign=odd_sign, even_sign=even_sign))
             report["deskew"] = dsrep
             report["steps"].append("deskew")
+            log.info("  deskew ok: %d pages in %.1fs", dsrep["page_count"], time.time() - t)
         if compress:
+            t = time.time()
             data, crep = compress_pdf_bytes(
                 data, CompressOptions(dpi=dpi, quality_color=quality_color,
-                                      quality_gray=quality_gray, color_mode=color_mode)
-            )
+                                      quality_gray=quality_gray, color_mode=color_mode))
             report["compress"] = crep
             report["steps"].append("compress")
+            log.info("  compress ok: %d pages, %.1fMB in %.1fs",
+                     crep["page_count"], crep["out_bytes"] / 1e6, time.time() - t)
+    except MemoryError:
+        log.exception("process OOM: file=%s size=%.1fMB", file.filename, in_bytes / 1e6)
+        raise HTTPException(
+            507, "The server ran out of memory processing this file. Try a smaller chapter, "
+                 "a lower DPI, or a larger server plan.")
+    except HTTPException:
+        raise
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(500, f"Failed to process PDF: {e}")
+        log.exception("process failed: file=%s", file.filename)
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
 
-    report["in_bytes"] = in_bytes
-    report["out_bytes"] = len(data)
     if not report["steps"]:
         raise HTTPException(400, "Nothing to do: enable deskew and/or compress.")
 
+    report["in_bytes"] = in_bytes
+    report["out_bytes"] = len(data)
+    peak = _peak_mem_mb()
+    if peak:
+        report["peak_mem_mb"] = round(peak)
+    log.info("process done: %s %.1fMB -> %.1fMB%s",
+             file.filename, in_bytes / 1e6, len(data) / 1e6,
+             f", peak RSS {peak:.0f}MB" if peak else "")
+
     stem = os.path.splitext(os.path.basename(file.filename))[0]
-    suffix = "_" + "_".join(report["steps"])
-    return _pdf_response(data, f"{stem}{suffix}.pdf", report)
+    return _pdf_response(data, f"{stem}_{'_'.join(report['steps'])}.pdf", report)
 
 
 @app.post("/api/merge")
@@ -89,13 +151,27 @@ async def merge(files: list[UploadFile] = File(...), name: str = Form("book")):
     for f in files:
         if not f.filename.lower().endswith(".pdf"):
             raise HTTPException(400, f"Not a PDF: {f.filename}")
-        parts.append((f.filename, await f.read()))
+        d = await f.read()
+        _check_size(f.filename, d)
+        parts.append((f.filename, d))
+    log.info("merge start: %d files, %.1fMB total", len(parts), sum(len(d) for _, d in parts) / 1e6)
     try:
         out, report = merge_pdfs(parts)
+    except MemoryError:
+        log.exception("merge OOM")
+        raise HTTPException(507, "The server ran out of memory merging these files. "
+                                 "Merge fewer at a time or use a larger server plan.")
     except Exception as e:  # noqa: BLE001
-        raise HTTPException(500, f"Failed to merge: {e}")
+        log.exception("merge failed")
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+    log.info("merge done: %d pages, %.1fMB", report["total_pages"], report["out_bytes"] / 1e6)
     safe = "".join(c for c in name if c.isalnum() or c in " _-").strip() or "book"
     return _pdf_response(out, f"{safe}.pdf", report)
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok", "max_upload_mb": MAX_UPLOAD_MB}
 
 
 # ── static frontend ────────────────────────────────────────────────────────
