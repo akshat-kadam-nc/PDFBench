@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DeskewPDF</title>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.2/babel.min.js"></script>
+<style>
+  :root{
+    --bg:#0f1115; --card:#171a21; --line:#2a2f3a; --fg:#e7e9ee; --mut:#9aa3b2;
+    --accent:#5b9dff; --accent2:#3b7de0; --ok:#3fb950; --warn:#d29922; --drop:#1d2330;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 20px 80px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
+  .sub{color:var(--mut);margin:0 0 28px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:46px 20px;text-align:center;
+    cursor:pointer;transition:.15s;background:var(--drop)}
+  .drop.hover{border-color:var(--accent);background:#1a2740}
+  .drop.busy{opacity:.7;cursor:progress}
+  .drop h2{margin:0 0 6px;font-size:18px;font-weight:600}
+  .drop p{margin:0;color:var(--mut);font-size:14px}
+  .opts{display:flex;flex-wrap:wrap;gap:16px;margin:18px 0 4px}
+  .opt{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mut)}
+  select,input{background:#0e1219;color:var(--fg);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font:inherit;min-width:130px}
+  .hint{font-size:12px;color:var(--mut);margin-top:14px}
+  .result{margin-top:22px}
+  .banner{display:flex;align-items:center;gap:10px;background:#12261a;border:1px solid #1e3a26;
+    color:#c6f0d0;border-radius:10px;padding:12px 14px;font-size:14px}
+  .banner.err{background:#2a1417;border-color:#5c2126;color:#f3c2c6}
+  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--mut);font-weight:600}
+  td.num{font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;
+    background:#1c2431;color:var(--mut)}
+  .tag.fb{background:#2a230f;color:var(--warn)}
+  .btn{margin-top:18px;background:var(--accent2);color:#fff;border:none;border-radius:9px;
+    padding:11px 18px;font:inherit;font-weight:600;cursor:pointer}
+  .btn:hover{background:var(--accent)}
+  .spin{width:16px;height:16px;border:2px solid #ffffff40;border-top-color:#fff;border-radius:50%;
+    display:inline-block;animation:s .7s linear infinite;vertical-align:-3px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  code{background:#0e1219;padding:1px 6px;border-radius:5px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useCallback, useRef} = React;
+
+function App(){
+  const [busy,setBusy]=useState(false);
+  const [hover,setHover]=useState(false);
+  const [err,setErr]=useState(null);
+  const [result,setResult]=useState(null); // {report, url, filename}
+  const [mode,setMode]=useState("hybrid");
+  const [base,setBase]=useState("1.4");
+  const [dir,setDir]=useState("odd-neg"); // odd-neg = odd -1/even +1
+  const inputRef=useRef();
+
+  const process=useCallback(async (file)=>{
+    setErr(null); setResult(null);
+    if(!file) return;
+    if(!file.name.toLowerCase().endsWith(".pdf")){ setErr("That's not a PDF."); return; }
+    setBusy(true);
+    try{
+      const [odd,even] = dir==="odd-neg" ? [-1,1] : [1,-1];
+      const fd=new FormData();
+      fd.append("file",file);
+      fd.append("mode",mode);
+      fd.append("base",base||"1.4");
+      fd.append("odd_sign",odd);
+      fd.append("even_sign",even);
+      const res=await fetch("/api/deskew",{method:"POST",body:fd});
+      if(!res.ok){ throw new Error((await res.json()).detail || res.statusText); }
+      const report=JSON.parse(res.headers.get("X-Deskew-Report")||"{}");
+      const blob=await res.blob();
+      const url=URL.createObjectURL(blob);
+      const filename=(file.name.replace(/\.pdf$/i,""))+"_deskewed.pdf";
+      setResult({report,url,filename});
+      // auto-download
+      const a=document.createElement("a"); a.href=url; a.download=filename; a.click();
+    }catch(e){ setErr(String(e.message||e)); }
+    finally{ setBusy(false); }
+  },[mode,base,dir]);
+
+  const onDrop=useCallback(e=>{e.preventDefault();setHover(false);
+    if(!busy) process(e.dataTransfer.files[0]);},[busy,process]);
+
+  return (
+    <div className="wrap">
+      <h1>DeskewPDF</h1>
+      <p className="sub">Drop a scanned PDF. Odd and even pages are straightened automatically and the corrected file downloads.</p>
+      <div className="card">
+        <div
+          className={"drop"+(hover?" hover":"")+(busy?" busy":"")}
+          onClick={()=>!busy&&inputRef.current.click()}
+          onDragOver={e=>{e.preventDefault();setHover(true);}}
+          onDragLeave={()=>setHover(false)}
+          onDrop={onDrop}>
+          {busy
+            ? <h2><span className="spin"></span>&nbsp; Straightening…</h2>
+            : <><h2>Drag &amp; drop a PDF here</h2><p>or click to choose a file</p></>}
+        </div>
+        <input ref={inputRef} type="file" accept="application/pdf" style={{display:"none"}}
+          onChange={e=>process(e.target.files[0])}/>
+
+        <div className="opts">
+          <label className="opt">Mode
+            <select value={mode} onChange={e=>setMode(e.target.value)}>
+              <option value="hybrid">Hybrid (detect + fallback)</option>
+              <option value="auto">Auto (trust detection)</option>
+              <option value="fixed">Fixed (parity angle only)</option>
+            </select>
+          </label>
+          <label className="opt">Fallback tilt (°)
+            <input type="number" step="0.1" value={base} onChange={e=>setBase(e.target.value)} />
+          </label>
+          <label className="opt">Direction
+            <select value={dir} onChange={e=>setDir(e.target.value)}>
+              <option value="odd-neg">Odd −, Even +</option>
+              <option value="odd-pos">Odd +, Even −</option>
+            </select>
+          </label>
+        </div>
+        <div className="hint">Rotation is applied as a lossless page transform — the scan image is not re-encoded and any text layer stays selectable.</div>
+      </div>
+
+      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+
+      {result && <Result r={result} />}
+    </div>
+  );
+}
+
+function Result({r}){
+  const rep=r.report;
+  return (
+    <div className="result">
+      <div className="banner">
+        ✓ Done — {rep.page_count} pages. Saved <code>{r.filename}</code>
+        &nbsp;({(rep.out_bytes/1e6).toFixed(2)} MB)
+      </div>
+      <table>
+        <thead><tr><th>Page</th><th>Parity</th><th>Measured</th><th>Applied</th><th>Method</th></tr></thead>
+        <tbody>
+          {rep.pages.map(p=>(
+            <tr key={p.page}>
+              <td className="num">{p.page}</td>
+              <td>{p.parity}</td>
+              <td className="num">{p.measured===null?"—":p.measured.toFixed(2)+"°"}</td>
+              <td className="num">{p.applied>=0?"+":""}{p.applied.toFixed(2)}°</td>
+              <td><span className={"tag"+(p.reason.startsWith("fallback")?" fb":"")}>{p.reason}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <a className="btn" href={r.url} download={r.filename}>Download again</a>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
