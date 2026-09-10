@@ -15,158 +15,287 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);
     font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .wrap{max-width:760px;margin:0 auto;padding:48px 20px 80px}
+  .wrap{max-width:780px;margin:0 auto;padding:44px 20px 90px}
   h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
-  .sub{color:var(--mut);margin:0 0 28px}
+  .sub{color:var(--mut);margin:0 0 22px}
+  .tabs{display:flex;gap:6px;margin-bottom:18px}
+  .tab{padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line);
+    background:var(--card);color:var(--mut);font-weight:600;font-size:14px}
+  .tab.on{color:#fff;border-color:var(--accent2);background:#1a2740}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
-  .drop{border:2px dashed var(--line);border-radius:12px;padding:46px 20px;text-align:center;
+  .drop{border:2px dashed var(--line);border-radius:12px;padding:42px 20px;text-align:center;
     cursor:pointer;transition:.15s;background:var(--drop)}
   .drop.hover{border-color:var(--accent);background:#1a2740}
   .drop.busy{opacity:.7;cursor:progress}
   .drop h2{margin:0 0 6px;font-size:18px;font-weight:600}
   .drop p{margin:0;color:var(--mut);font-size:14px}
-  .opts{display:flex;flex-wrap:wrap;gap:16px;margin:18px 0 4px}
+  .row{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin:18px 0 2px}
+  .chk{display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer}
+  .chk input{width:17px;height:17px;accent-color:var(--accent2)}
+  .opts{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0 2px}
   .opt{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mut)}
-  select,input{background:#0e1219;color:var(--fg);border:1px solid var(--line);
-    border-radius:8px;padding:8px 10px;font:inherit;min-width:130px}
+  select,input[type=number],input[type=text]{background:#0e1219;color:var(--fg);
+    border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;min-width:120px}
   .hint{font-size:12px;color:var(--mut);margin-top:14px}
+  .fade{opacity:.4;pointer-events:none}
   .result{margin-top:22px}
   .banner{display:flex;align-items:center;gap:10px;background:#12261a;border:1px solid #1e3a26;
-    color:#c6f0d0;border-radius:10px;padding:12px 14px;font-size:14px}
+    color:#c6f0d0;border-radius:10px;padding:12px 14px;font-size:14px;flex-wrap:wrap}
   .banner.err{background:#2a1417;border-color:#5c2126;color:#f3c2c6}
+  .big{font-size:15px;font-weight:700}
   table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
   th{color:var(--mut);font-weight:600}
   td.num{font-variant-numeric:tabular-nums}
-  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;
-    background:#1c2431;color:var(--mut)}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;background:#1c2431;color:var(--mut)}
   .tag.fb{background:#2a230f;color:var(--warn)}
-  .btn{margin-top:18px;background:var(--accent2);color:#fff;border:none;border-radius:9px;
+  .tag.color{background:#182a3a;color:#7fc0ff}
+  .tag.gray{background:#22262e;color:#b9c0cc}
+  .btn{margin-top:16px;background:var(--accent2);color:#fff;border:none;border-radius:9px;
     padding:11px 18px;font:inherit;font-weight:600;cursor:pointer}
   .btn:hover{background:var(--accent)}
+  .btn:disabled{background:#2a2f3a;cursor:not-allowed}
   .spin{width:16px;height:16px;border:2px solid #ffffff40;border-top-color:#fff;border-radius:50%;
     display:inline-block;animation:s .7s linear infinite;vertical-align:-3px}
   @keyframes s{to{transform:rotate(360deg)}}
   code{background:#0e1219;padding:1px 6px;border-radius:5px}
+  ul.files{list-style:none;padding:0;margin:14px 0 0}
+  ul.files li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:8px;margin-bottom:6px;font-size:13px}
+  ul.files li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  ul.files li button{background:#0e1219;border:1px solid var(--line);color:var(--mut);
+    border-radius:6px;cursor:pointer;padding:3px 8px;font:inherit}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
 const {useState, useCallback, useRef} = React;
+const MB = b => (b/1e6).toFixed(2)+" MB";
 
-function App(){
-  const [busy,setBusy]=useState(false);
+function Drop({busy, label, sub, accept, multiple, onFiles}){
   const [hover,setHover]=useState(false);
-  const [err,setErr]=useState(null);
-  const [result,setResult]=useState(null); // {report, url, filename}
-  const [mode,setMode]=useState("hybrid");
-  const [base,setBase]=useState("1.4");
-  const [dir,setDir]=useState("odd-neg"); // odd-neg = odd -1/even +1
-  const inputRef=useRef();
+  const ref=useRef();
+  return (
+    <>
+      <div className={"drop"+(hover?" hover":"")+(busy?" busy":"")}
+        onClick={()=>!busy&&ref.current.click()}
+        onDragOver={e=>{e.preventDefault();setHover(true);}}
+        onDragLeave={()=>setHover(false)}
+        onDrop={e=>{e.preventDefault();setHover(false);if(!busy)onFiles([...e.dataTransfer.files]);}}>
+        {busy ? <h2><span className="spin"></span>&nbsp; Working…</h2>
+              : <><h2>{label}</h2><p>{sub}</p></>}
+      </div>
+      <input ref={ref} type="file" accept={accept} multiple={multiple} style={{display:"none"}}
+        onChange={e=>{onFiles([...e.target.files]); e.target.value="";}}/>
+    </>
+  );
+}
 
-  const process=useCallback(async (file)=>{
-    setErr(null); setResult(null);
+function ProcessTab(){
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState(null);
+  const [result,setResult]=useState(null);
+  const [deskew,setDeskew]=useState(true);
+  const [compress,setCompress]=useState(true);
+  const [dpi,setDpi]=useState("120");
+  const [qc,setQc]=useState("55");
+  const [qg,setQg]=useState("45");
+  const [colorMode,setColorMode]=useState("auto");
+  const [mode,setMode]=useState("hybrid");
+  const [dir,setDir]=useState("odd-neg");
+
+  const run=useCallback(async (files)=>{
+    const file=files[0]; setErr(null); setResult(null);
     if(!file) return;
-    if(!file.name.toLowerCase().endsWith(".pdf")){ setErr("That's not a PDF."); return; }
+    if(!file.name.toLowerCase().endsWith(".pdf")){setErr("That's not a PDF.");return;}
+    if(!deskew && !compress){setErr("Enable deskew and/or compress.");return;}
     setBusy(true);
     try{
-      const [odd,even] = dir==="odd-neg" ? [-1,1] : [1,-1];
+      const [odd,even]=dir==="odd-neg"?[-1,1]:[1,-1];
       const fd=new FormData();
       fd.append("file",file);
-      fd.append("mode",mode);
-      fd.append("base",base||"1.4");
-      fd.append("odd_sign",odd);
-      fd.append("even_sign",even);
-      const res=await fetch("/api/deskew",{method:"POST",body:fd});
-      if(!res.ok){ throw new Error((await res.json()).detail || res.statusText); }
-      const report=JSON.parse(res.headers.get("X-Deskew-Report")||"{}");
+      fd.append("deskew",deskew); fd.append("compress",compress);
+      fd.append("mode",mode); fd.append("odd_sign",odd); fd.append("even_sign",even);
+      fd.append("dpi",dpi||"120"); fd.append("quality_color",qc||"55");
+      fd.append("quality_gray",qg||"45"); fd.append("color_mode",colorMode);
+      const res=await fetch("/api/process",{method:"POST",body:fd});
+      if(!res.ok) throw new Error((await res.json().catch(()=>({}))).detail||res.statusText);
+      const report=JSON.parse(res.headers.get("X-Report")||"{}");
       const blob=await res.blob();
       const url=URL.createObjectURL(blob);
-      const filename=(file.name.replace(/\.pdf$/i,""))+"_deskewed.pdf";
+      const filename=(file.name.replace(/\.pdf$/i,""))+"_"+(report.steps||["out"]).join("_")+".pdf";
       setResult({report,url,filename});
-      // auto-download
-      const a=document.createElement("a"); a.href=url; a.download=filename; a.click();
-    }catch(e){ setErr(String(e.message||e)); }
-    finally{ setBusy(false); }
-  },[mode,base,dir]);
-
-  const onDrop=useCallback(e=>{e.preventDefault();setHover(false);
-    if(!busy) process(e.dataTransfer.files[0]);},[busy,process]);
+      const a=document.createElement("a");a.href=url;a.download=filename;a.click();
+    }catch(e){setErr(String(e.message||e));}
+    finally{setBusy(false);}
+  },[deskew,compress,dpi,qc,qg,colorMode,mode,dir]);
 
   return (
-    <div className="wrap">
-      <h1>DeskewPDF</h1>
-      <p className="sub">Drop a scanned PDF. Odd and even pages are straightened automatically and the corrected file downloads.</p>
-      <div className="card">
-        <div
-          className={"drop"+(hover?" hover":"")+(busy?" busy":"")}
-          onClick={()=>!busy&&inputRef.current.click()}
-          onDragOver={e=>{e.preventDefault();setHover(true);}}
-          onDragLeave={()=>setHover(false)}
-          onDrop={onDrop}>
-          {busy
-            ? <h2><span className="spin"></span>&nbsp; Straightening…</h2>
-            : <><h2>Drag &amp; drop a PDF here</h2><p>or click to choose a file</p></>}
-        </div>
-        <input ref={inputRef} type="file" accept="application/pdf" style={{display:"none"}}
-          onChange={e=>process(e.target.files[0])}/>
-
-        <div className="opts">
-          <label className="opt">Mode
-            <select value={mode} onChange={e=>setMode(e.target.value)}>
-              <option value="hybrid">Hybrid (detect + fallback)</option>
-              <option value="auto">Auto (trust detection)</option>
-              <option value="fixed">Fixed (parity angle only)</option>
-            </select>
-          </label>
-          <label className="opt">Fallback tilt (°)
-            <input type="number" step="0.1" value={base} onChange={e=>setBase(e.target.value)} />
-          </label>
-          <label className="opt">Direction
-            <select value={dir} onChange={e=>setDir(e.target.value)}>
-              <option value="odd-neg">Odd −, Even +</option>
-              <option value="odd-pos">Odd +, Even −</option>
-            </select>
-          </label>
-        </div>
-        <div className="hint">Rotation is applied as a lossless page transform — the scan image is not re-encoded and any text layer stays selectable.</div>
+    <div className="card">
+      <Drop busy={busy} label="Drag & drop a chapter PDF" sub="or click to choose a file"
+        accept="application/pdf" multiple={false} onFiles={run}/>
+      <div className="row">
+        <label className="chk"><input type="checkbox" checked={deskew} onChange={e=>setDeskew(e.target.checked)}/> Deskew</label>
+        <label className="chk"><input type="checkbox" checked={compress} onChange={e=>setCompress(e.target.checked)}/> Compress</label>
       </div>
 
-      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+      <div className={"opts"+(deskew?"":" fade")}>
+        <label className="opt">Deskew mode
+          <select value={mode} onChange={e=>setMode(e.target.value)}>
+            <option value="hybrid">Hybrid</option><option value="auto">Auto</option><option value="fixed">Fixed</option>
+          </select></label>
+        <label className="opt">Direction
+          <select value={dir} onChange={e=>setDir(e.target.value)}>
+            <option value="odd-neg">Odd −, Even +</option><option value="odd-pos">Odd +, Even −</option>
+          </select></label>
+      </div>
 
-      {result && <Result r={result} />}
+      <div className={"opts"+(compress?"":" fade")}>
+        <label className="opt">Resolution (DPI)
+          <input type="number" step="10" value={dpi} onChange={e=>setDpi(e.target.value)}/></label>
+        <label className="opt">Color quality
+          <input type="number" min="10" max="95" value={qc} onChange={e=>setQc(e.target.value)}/></label>
+        <label className="opt">Gray quality
+          <input type="number" min="10" max="95" value={qg} onChange={e=>setQg(e.target.value)}/></label>
+        <label className="opt">Color handling
+          <select value={colorMode} onChange={e=>setColorMode(e.target.value)}>
+            <option value="auto">Auto (text→gray, figures→color)</option>
+            <option value="force_color">Always color</option>
+            <option value="force_gray">Always grayscale</option>
+          </select></label>
+      </div>
+      <div className="hint">Lossless deskew transform + adaptive image recompression. Text layer stays selectable.</div>
+
+      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+      {result && <ProcessResult r={result}/>}
     </div>
   );
 }
 
-function Result({r}){
-  const rep=r.report;
+function ProcessResult({r}){
+  const rep=r.report, ds=rep.deskew, cp=rep.compress;
+  const pct=rep.in_bytes?Math.round(rep.out_bytes/rep.in_bytes*100):100;
   return (
     <div className="result">
       <div className="banner">
-        ✓ Done — {rep.page_count} pages. Saved <code>{r.filename}</code>
-        &nbsp;({(rep.out_bytes/1e6).toFixed(2)} MB)
+        <span className="big">✓ {MB(rep.in_bytes)} → {MB(rep.out_bytes)} ({pct}%)</span>
+        &nbsp;· saved <code>{r.filename}</code>
+        {cp && <>&nbsp;· {cp.color_pages} color / {cp.gray_pages} gray pages</>}
       </div>
-      <table>
-        <thead><tr><th>Page</th><th>Parity</th><th>Measured</th><th>Applied</th><th>Method</th></tr></thead>
-        <tbody>
-          {rep.pages.map(p=>(
-            <tr key={p.page}>
-              <td className="num">{p.page}</td>
-              <td>{p.parity}</td>
-              <td className="num">{p.measured===null?"—":p.measured.toFixed(2)+"°"}</td>
-              <td className="num">{p.applied>=0?"+":""}{p.applied.toFixed(2)}°</td>
-              <td><span className={"tag"+(p.reason.startsWith("fallback")?" fb":"")}>{p.reason}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {(ds||cp) &&
+        <table>
+          <thead><tr><th>Page</th>{ds&&<><th>Measured</th><th>Applied</th><th>Deskew</th></>}{cp&&<th>Color</th>}</tr></thead>
+          <tbody>
+            {(ds?ds.pages:cp.pages).map((p,i)=>{
+              const c=cp?cp.pages[i]:null;
+              return <tr key={p.page}>
+                <td className="num">{p.page}</td>
+                {ds&&<><td className="num">{p.measured===null?"—":p.measured.toFixed(2)+"°"}</td>
+                  <td className="num">{p.applied>=0?"+":""}{p.applied.toFixed(2)}°</td>
+                  <td><span className={"tag"+(p.reason.startsWith("fallback")?" fb":"")}>{p.reason}</span></td></>}
+                {cp&&<td><span className={"tag "+(c.mode)}>{c.mode}</span></td>}
+              </tr>;
+            })}
+          </tbody>
+        </table>}
       <a className="btn" href={r.url} download={r.filename}>Download again</a>
     </div>
   );
 }
 
+function MergeTab(){
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState(null);
+  const [items,setItems]=useState([]); // {file}
+  const [name,setName]=useState("book");
+  const [result,setResult]=useState(null);
+
+  const add=useCallback(fs=>{
+    const pdfs=fs.filter(f=>f.name.toLowerCase().endsWith(".pdf"));
+    setItems(prev=>{
+      const all=[...prev,...pdfs.map(f=>({file:f}))];
+      all.sort((a,b)=>a.file.name.localeCompare(b.file.name,undefined,{numeric:true}));
+      return all;
+    });
+    setResult(null);
+  },[]);
+  const move=(i,d)=>setItems(p=>{const a=[...p];const j=i+d;if(j<0||j>=a.length)return a;[a[i],a[j]]=[a[j],a[i]];return a;});
+  const remove=i=>setItems(p=>p.filter((_,x)=>x!==i));
+
+  const doMerge=useCallback(async()=>{
+    setErr(null);setResult(null);
+    if(items.length<2){setErr("Add at least two PDFs.");return;}
+    setBusy(true);
+    try{
+      const fd=new FormData();
+      items.forEach(it=>fd.append("files",it.file));
+      fd.append("name",name||"book");
+      const res=await fetch("/api/merge",{method:"POST",body:fd});
+      if(!res.ok) throw new Error((await res.json().catch(()=>({}))).detail||res.statusText);
+      const report=JSON.parse(res.headers.get("X-Report")||"{}");
+      const blob=await res.blob();const url=URL.createObjectURL(blob);
+      const filename=(name||"book")+".pdf";
+      setResult({report,url,filename});
+      const a=document.createElement("a");a.href=url;a.download=filename;a.click();
+    }catch(e){setErr(String(e.message||e));}
+    finally{setBusy(false);}
+  },[items,name]);
+
+  const totalIn=items.reduce((s,it)=>s+it.file.size,0);
+  return (
+    <div className="card">
+      <Drop busy={busy} label="Drop chapter PDFs to merge" sub="add as many as you like — sorted by filename"
+        accept="application/pdf" multiple={true} onFiles={add}/>
+      {items.length>0 &&
+        <ul className="files">
+          {items.map((it,i)=>(
+            <li key={i}>
+              <span className="nm">{i+1}. {it.file.name}</span>
+              <span className="num" style={{color:"var(--mut)"}}>{MB(it.file.size)}</span>
+              <button onClick={()=>move(i,-1)} disabled={i===0}>↑</button>
+              <button onClick={()=>move(i,1)} disabled={i===items.length-1}>↓</button>
+              <button onClick={()=>remove(i)}>✕</button>
+            </li>
+          ))}
+        </ul>}
+      {items.length>0 &&
+        <div className="opts" style={{marginTop:14}}>
+          <label className="opt">Output name
+            <input type="text" value={name} onChange={e=>setName(e.target.value)}/></label>
+          <div className="opt">Combined input<span style={{color:"var(--fg)",fontWeight:600}}>{MB(totalIn)} · {items.length} files</span></div>
+        </div>}
+      <button className="btn" onClick={doMerge} disabled={busy||items.length<2}>
+        {busy?"Merging…":"Merge into one PDF"}</button>
+      <div className="hint">Merging is lossless — deskew/compress your chapters first, then combine them here.</div>
+      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+      {result &&
+        <div className="result"><div className="banner">
+          <span className="big">✓ {result.report.total_pages} pages · {MB(result.report.out_bytes)}</span>
+          &nbsp;· saved <code>{result.filename}</code>
+          {result.report.out_bytes<10e6
+            ? <span className="tag color" style={{marginLeft:8}}>under 10 MB</span>
+            : <span className="tag fb" style={{marginLeft:8}}>over 10 MB</span>}
+          <a className="btn" href={result.url} download={result.filename} style={{marginLeft:"auto"}}>Download again</a>
+        </div></div>}
+    </div>
+  );
+}
+
+function App(){
+  const [tab,setTab]=useState("process");
+  return (
+    <div className="wrap">
+      <h1>DeskewPDF</h1>
+      <p className="sub">Straighten and shrink scanned chapters, then merge them into the book.</p>
+      <div className="tabs">
+        <div className={"tab"+(tab==="process"?" on":"")} onClick={()=>setTab("process")}>Deskew &amp; Compress</div>
+        <div className={"tab"+(tab==="merge"?" on":"")} onClick={()=>setTab("merge")}>Merge</div>
+      </div>
+      {tab==="process"?<ProcessTab/>:<MergeTab/>}
+    </div>
+  );
+}
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
