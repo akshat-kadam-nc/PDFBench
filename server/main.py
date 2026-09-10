@@ -1,6 +1,7 @@
 """FastAPI server: serves the React frontend and runs deskew / compress / merge."""
 from __future__ import annotations
 
+import gc
 import json
 import logging
 import os
@@ -107,6 +108,7 @@ async def process(
             report["deskew"] = dsrep
             report["steps"].append("deskew")
             log.info("  deskew ok: %d pages in %.1fs", dsrep["page_count"], time.time() - t)
+            gc.collect()
         if compress:
             t = time.time()
             data, crep = compress_pdf_bytes(

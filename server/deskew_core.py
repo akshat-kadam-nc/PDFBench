@@ -83,6 +83,7 @@ def deskew_pdf_bytes(data: bytes, o: Options | None = None):
             "reason": reason,
         })
 
+    mdoc.close()  # release the measurement copy before writing the output
     if reader.metadata:
         writer.add_metadata(reader.metadata)
     buf = io.BytesIO()

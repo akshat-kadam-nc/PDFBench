@@ -10,6 +10,7 @@ left untouched.
 """
 from __future__ import annotations
 
+import gc
 import io
 from dataclasses import dataclass, asdict
 
@@ -58,9 +59,16 @@ def compress_pdf_bytes(data: bytes, o: CompressOptions | None = None):
                 d = doc.extract_image(xref)
             except Exception:  # noqa: BLE001
                 continue
-            pil = Image.open(io.BytesIO(d["image"]))
             tw = max(1, int(round(o.dpi * pw_in)))
             th = max(1, int(round(o.dpi * ph_in)))
+            pil = Image.open(io.BytesIO(d["image"]))
+            # JPEG draft: decode directly at a reduced scale (1/2, 1/4, ...) so we
+            # never materialize the full-resolution bitmap. Big memory + speed win.
+            try:
+                pil.draft(None, (tw, th))
+            except Exception:  # noqa: BLE001 — non-JPEG or unsupported; decode normally
+                pass
+            pil.load()
             if pil.width > tw or pil.height > th:
                 pil = pil.resize((tw, th), Image.LANCZOS)
             color = _keep_color(pil, o)
@@ -71,7 +79,10 @@ def compress_pdf_bytes(data: bytes, o: CompressOptions | None = None):
             else:
                 pil.convert("L").save(out, "JPEG", quality=o.quality_gray, optimize=True)
             page.replace_image(xref, stream=out.getvalue())
+            pil.close()
+            del pil, d, out
         pages.append({"page": i + 1, "mode": page_mode})
+        gc.collect()
 
     buf = io.BytesIO()
     doc.save(buf, garbage=4, deflate=True, clean=True)
