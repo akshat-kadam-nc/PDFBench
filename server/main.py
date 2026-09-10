@@ -41,10 +41,10 @@ async def process(
     odd_sign: float = Form(-1.0),
     even_sign: float = Form(1.0),
     # compress params
-    dpi: int = Form(120),
-    quality_color: int = Form(55),
+    dpi: int = Form(110),
+    quality_color: int = Form(52),
     quality_gray: int = Form(45),
-    color_mode: str = Form("auto"),
+    color_mode: str = Form("force_color"),
 ):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Please upload a .pdf file.")

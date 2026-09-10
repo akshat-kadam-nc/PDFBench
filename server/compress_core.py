@@ -20,11 +20,11 @@ from PIL import Image
 
 @dataclass
 class CompressOptions:
-    dpi: int = 120                # target resolution for the page image
-    quality_color: int = 55       # JPEG quality for color pages
+    dpi: int = 110                # target resolution for the page image
+    quality_color: int = 52       # JPEG quality for color pages
     quality_gray: int = 45        # JPEG quality for grayscale pages
     color_threshold: float = 0.015  # min fraction of colored pixels -> keep color
-    color_mode: str = "auto"      # auto | force_color | force_gray
+    color_mode: str = "force_color"  # force_color | auto | force_gray
 
 
 def _colored_fraction(pil) -> float:
