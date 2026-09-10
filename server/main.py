@@ -5,6 +5,7 @@ import gc
 import json
 import logging
 import os
+import sys
 import time
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -22,7 +23,11 @@ logging.basicConfig(
 log = logging.getLogger("deskewpdf")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WEB = os.path.join(os.path.dirname(HERE), "web")
+# When frozen by PyInstaller, bundled data lives under sys._MEIPASS/web.
+if getattr(sys, "frozen", False):
+    WEB = os.path.join(sys._MEIPASS, "web")  # type: ignore[attr-defined]
+else:
+    WEB = os.path.join(os.path.dirname(HERE), "web")
 
 # Guard rails
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "80"))

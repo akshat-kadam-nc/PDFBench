@@ -46,6 +46,27 @@ Controls in the UI:
 The result table shows, per page, the measured and applied angle plus which
 method was used, so a large batch is easy to trust at a glance.
 
+## Share it as a standalone app (no install, no server)
+
+The heavy work (rendering, skew detection, image recompression) is too much for
+a small cloud instance's RAM. The robust way to share it is to run it on each
+user's own machine — which keeps the searchable OCR text layer intact (needed
+for RAG) and costs nothing.
+
+Build a single self-contained Windows executable:
+
+```
+build_exe.bat        (after run.bat has created the .venv once)
+```
+
+This produces `dist\DeskewPDF.exe` (~110 MB). Send that one file to a teammate.
+They double-click it, their browser opens to the app, and everything runs
+locally. Closing the console window quits it. First launch takes ~15–20s while
+the bundle unpacks.
+
+`desktop.py` is the entry point (starts the server, opens the browser); it also
+works with `python desktop.py` during development.
+
 ## Deploy to Render (shareable URL)
 
 No database required — the tool is stateless. The repo is containerized
