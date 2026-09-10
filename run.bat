@@ -23,8 +23,17 @@ if not exist "%VENV%\.deps_installed" (
   echo done > "%VENV%\.deps_installed"
 )
 
-echo Starting DeskewPDF at http://127.0.0.1:8765
-start "" http://127.0.0.1:8765
-"%PY%" -m uvicorn server.main:app --host 127.0.0.1 --port 8765
+set PORT=8765
+
+REM Free the port from any stale server left running from a previous launch,
+REM so the browser can never end up talking to an old process.
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%PORT%" ^| findstr LISTENING') do (
+  echo Stopping stale server on port %PORT% ^(PID %%p^)...
+  taskkill /F /PID %%p >nul 2>&1
+)
+
+echo Starting DeskewPDF at http://127.0.0.1:%PORT%
+start "" http://127.0.0.1:%PORT%
+"%PY%" -m uvicorn server.main:app --host 127.0.0.1 --port %PORT%
 
 pause
