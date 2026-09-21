@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>PDF Bench — User Manual</title>
+<title>PDF Bench User Manual</title>
 <style>
   :root{
     --bg:#f5f7fb; --card:#fff; --line:#e3e7ee; --fg:#1b1f27; --mut:#5c6675;
@@ -63,7 +63,7 @@
       <path d="M29.5 21.5l.8 4.7 4-2z" fill="#facc15"/>
     </svg>
     <div>
-      <h1>PDF Bench — User Manual</h1>
+      <h1>PDF Bench User Manual</h1>
       <p>A local desktop toolbox for scanned and document PDFs. Everything runs on your machine.</p>
     </div>
   </header>
@@ -93,7 +93,7 @@
     <h2 id="what">What it is</h2>
     <p>PDF Bench is a small Windows app for preparing and tidying PDF files. It was built to get
     scanned book chapters ready for search/AI pipelines, and grew a handful of everyday PDF tools.
-    It runs entirely on your own computer — no accounts, no uploads, no internet required — and it
+    It runs entirely on your own computer (no accounts, no uploads, no internet required) and it
     opens as a normal desktop window (not in your web browser).</p>
     <p>Tools available today:</p>
     <table>
@@ -112,7 +112,7 @@
       <li>Double-click <code>PDFBench-Setup.exe</code>.</li>
       <li>Windows may show a blue <strong>SmartScreen</strong> warning because the app isn't code-signed.
         Click <strong>More info → Run anyway</strong>. (This is expected for independent apps.)</li>
-      <li>The installer runs <strong>per-user</strong> — no administrator password needed. Optionally tick
+      <li>The installer runs <strong>per-user</strong>, so no administrator password is needed. Optionally tick
         <strong>"Create a desktop shortcut."</strong></li>
       <li>Finish, and optionally let it launch straight away.</li>
     </ol>
@@ -121,8 +121,8 @@
 
     <h2 id="launch">Launch &amp; quit</h2>
     <p>Open <strong>Start Menu → PDF Bench</strong> (or the desktop shortcut). The app opens in its own
-    window. <strong>The first launch each time takes about 15–20 seconds</strong> while it unpacks —
-    this is normal. Close the window to quit.</p>
+    window. <strong>The first launch each time takes about 15-20 seconds</strong> while it unpacks.
+    This is normal. Close the window to quit.</p>
 
     <h2 id="working-doc">The working document</h2>
     <p>PDF Bench is built around <strong>one working document</strong>. You load a PDF once; then every
@@ -136,26 +136,26 @@
     <p>Straightens the small, consistent tilt an automatic-feed scanner introduces (odd pages lean one
     way, even pages the other).</p>
     <ul>
-      <li><strong>Deskew mode</strong> — <em>Hybrid</em> (default) measures each page and falls back to a
+      <li><strong>Deskew mode</strong>: <em>Hybrid</em> (default) measures each page and falls back to a
         fixed angle if the measurement looks wrong; <em>Auto</em> trusts the measurement; <em>Fixed</em>
         always applies the set angle.</li>
-      <li><strong>Direction</strong> — which way odd vs. even pages should rotate.</li>
+      <li><strong>Direction</strong>: which way odd vs. even pages should rotate.</li>
     </ul>
     <p>After running, a per-page table shows the measured and applied angle so you can trust a large
-    batch at a glance. Deskew is <strong>lossless</strong> — the page image is rotated, not re-encoded.</p>
+    batch at a glance. Deskew is <strong>lossless</strong>: the page image is rotated, not re-encoded.</p>
 
     <h2 id="compress">Compress</h2>
     <p>Reduces file size by downsampling and re-encoding each page's image.</p>
     <ul>
-      <li><strong>Resolution (DPI)</strong> — lower means smaller files (110 is a good default).</li>
-      <li><strong>Color / Gray quality</strong> — JPEG quality for color and grayscale pages.</li>
-      <li><strong>Color handling</strong> — keep every page in color, decide per page automatically, or
+      <li><strong>Resolution (DPI)</strong>: lower means smaller files (110 is a good default).</li>
+      <li><strong>Color / Gray quality</strong>: JPEG quality for color and grayscale pages.</li>
+      <li><strong>Color handling</strong>: keep every page in color, decide per page automatically, or
         force grayscale.</li>
     </ul>
 
     <h2 id="combos">Running several operations at once</h2>
     <p>Each operation tab (Deskew, Compress) has a <strong>checkbox</strong>. Tick every operation you
-    want and press <strong>Run</strong> — they apply in order to the working file in one shot (the button
+    want and press <strong>Run</strong>, and they apply in order to the working file in one shot (the button
     reads e.g. <strong>"Run Deskew + Compress"</strong>). Click a tab's name to edit that operation's
     options; the checkbox controls whether it runs.</p>
 
@@ -167,10 +167,10 @@
     <h2 id="organize">Organize pages</h2>
     <p>Shows a thumbnail of every page. You can:</p>
     <ul>
-      <li><strong>Reorder</strong> — drag a page to a new position.</li>
-      <li><strong>Rotate</strong> — use the rotate buttons on a page.</li>
-      <li><strong>Delete</strong> — remove a page.</li>
-      <li><strong>Bulk actions</strong> — click pages to select them, then use <strong>Left / Right /
+      <li><strong>Reorder</strong>: drag a page to a new position.</li>
+      <li><strong>Rotate</strong>: use the rotate buttons on a page.</li>
+      <li><strong>Delete</strong>: remove a page.</li>
+      <li><strong>Bulk actions</strong>: click pages to select them, then use <strong>Left / Right /
         Delete</strong> at the top.</li>
     </ul>
     <p>Press <strong>Apply changes</strong> to rebuild the PDF. This is lossless and keeps the text layer.</p>
@@ -192,7 +192,7 @@
     <ul>
       <li><strong>Nothing leaves your computer.</strong> All processing happens locally; the app does not
         connect to the internet.</li>
-      <li>Your source PDFs are never modified — you always get a <em>new</em> file when you Download.</li>
+      <li>Your source PDFs are never modified, so you always get a <em>new</em> file when you Download.</li>
       <li>The usage log lives at <code>%LocalAppData%\PDFBench\history.jsonl</code>.</li>
     </ul>
 
@@ -200,7 +200,7 @@
     <table>
       <tr><th>Symptom</th><th>Fix</th></tr>
       <tr><td>SmartScreen blocks the installer</td><td>Click <strong>More info → Run anyway</strong>. The app is unsigned but safe.</td></tr>
-      <tr><td>First launch is slow</td><td>Normal — the bundle unpacks on each start (~15–20s).</td></tr>
+      <tr><td>First launch is slow</td><td>Normal: the bundle unpacks on each start (~15-20s).</td></tr>
       <tr><td>Window is blank / won't display</td><td>PDF Bench needs the <strong>Microsoft Edge WebView2 Runtime</strong>, which is preinstalled on current Windows 10/11. If missing, install it free from Microsoft, then relaunch.</td></tr>
       <tr><td>A large file won't process</td><td>There's an 80&nbsp;MB per-file limit. Split very large books into chapters, or lower the DPI.</td></tr>
       <tr><td>Download didn't prompt</td><td>Downloads save through the window's built-in viewer; check your Downloads folder.</td></tr>
@@ -211,7 +211,7 @@
     Start Menu shortcut. Your history log is left in place; delete
     <code>%LocalAppData%\PDFBench</code> if you want it gone too.</p>
 
-    <footer>PDF Bench — local PDF toolbox. This manual ships with the app.</footer>
+    <footer>PDF Bench, a local PDF toolbox. This manual ships with the app.</footer>
   </main>
 </div>
 </body>

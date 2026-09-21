@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>PDF Bench — Technical Documentation</title>
+<title>PDF Bench Technical Documentation</title>
 <style>
   :root{
     --bg:#f5f7fb; --card:#fff; --line:#e3e7ee; --fg:#1b1f27; --mut:#5c6675;
@@ -61,7 +61,7 @@
       <path d="M29.5 21.5l.8 4.7 4-2z" fill="#facc15"/>
     </svg>
     <div>
-      <h1>PDF Bench — Technical Documentation</h1>
+      <h1>PDF Bench Technical Documentation</h1>
       <p>Architecture, packages, and how files and memory are handled under the hood.</p>
     </div>
   </header>
@@ -126,7 +126,7 @@
       <tr><th>Method / path</th><th>Purpose</th></tr>
       <tr><td class="mono">POST /api/process</td><td>Deskew and/or compress a single PDF (flags select which). Returns the new PDF; report in the <code>X-Report</code> header.</td></tr>
       <tr><td class="mono">POST /api/merge</td><td>Merge several PDFs into one.</td></tr>
-      <tr><td class="mono">POST /api/pages</td><td>Return small PNG thumbnails (data URLs) for every page — used by Organize.</td></tr>
+      <tr><td class="mono">POST /api/pages</td><td>Return small PNG thumbnails (data URLs) for every page, used by Organize.</td></tr>
       <tr><td class="mono">POST /api/organize</td><td>Rebuild a PDF from a new page order with per-page rotation/deletion.</td></tr>
       <tr><td class="mono">GET&nbsp;/api/history</td><td>Return the usage log and totals.</td></tr>
       <tr><td class="mono">DELETE /api/history</td><td>Clear the usage log.</td></tr>
@@ -137,7 +137,7 @@
     <div class="note"><strong>The searchable text layer is never rasterized.</strong> This is the core
     correctness rule, because the output feeds text-extraction / RAG pipelines.</div>
     <ul>
-      <li><strong>Deskew</strong> applies a pypdf page rotation transform — the page's content stream and
+      <li><strong>Deskew</strong> applies a pypdf page rotation transform, so the page's content stream and
         text are untouched; only the visual angle changes.</li>
       <li><strong>Compress</strong> replaces the embedded <em>page image</em> with a smaller re-encoded
         image (extract → JPEG draft-decode → resize → recompress). The text layer sits above the image
@@ -216,11 +216,11 @@
     </table>
 
     <h2 id="packaging">Packaging &amp; installer</h2>
-    <p><strong>Executable</strong> — <code>build_exe.bat</code> runs PyInstaller with
+    <p><strong>Executable</strong>: <code>build_exe.bat</code> runs PyInstaller with
     <code>--onefile --windowed --icon assets\PDFBench.ico</code>, collecting the heavy native libs
     (scikit-image, scipy, PyMuPDF, deskew, pywebview) and bundling <code>web/</code>. Output:
     <code>dist\PDFBench.exe</code> (~120&nbsp;MB).</p>
-    <p><strong>Installer</strong> — <code>installer\PDFBench.iss</code> (Inno Setup) packages that exe into
+    <p><strong>Installer</strong>: <code>installer\PDFBench.iss</code> (Inno Setup) packages that exe into
     <code>installer\Output\PDFBench-Setup.exe</code>. It installs per-user (no admin), creates Start Menu
     and optional desktop shortcuts, and registers an uninstaller. The exe is <strong>unsigned</strong>, so
     Windows SmartScreen warns once on first run.</p>
@@ -243,7 +243,7 @@ build_exe.bat      # build dist\PDFBench.exe (windowed one-file)
       <li>No code signing; distribute with a checksum and expect the SmartScreen prompt.</li>
     </ul>
 
-    <footer>PDF Bench — technical reference. Generated for the current build.</footer>
+    <footer>PDF Bench technical reference. Generated for the current build.</footer>
   </main>
 </div>
 </body>

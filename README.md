@@ -2,24 +2,24 @@
 
 A local desktop toolbox for scanned PDFs: **deskew** the predictable ADF-scanner
 tilt, **compress** each chapter, and **merge** chapters into the finished book.
-Everything runs on your own machine — no server, no cloud, and the searchable
+Everything runs on your own machine, with no server or cloud, and the searchable
 OCR text layer is always preserved (so the output still feeds a RAG pipeline).
 
 Tabs:
 
-- **Deskew & Compress** — choose one chapter PDF, set options, click **Start**.
+- **Deskew & Compress**: choose one chapter PDF, set options, click **Start**.
   Deskew rotates each page around its center as a **lossless transform** (scan
   image not re-encoded, OCR text layer stays selectable). Compress downsamples
   the page image to a target DPI and re-encodes it, deciding color per page.
-- **Merge** — add processed chapters, order them (auto-sorted by filename), and
+- **Merge**: add processed chapters, order them (auto-sorted by filename), and
   combine into one lossless PDF.
-- **History** — a local log of every file processed, with totals (files, input
+- **History**: a local log of every file processed, with totals (files, input
   vs. output size, space saved). Stored at `%LOCALAPPDATA%\PDFBench`.
 
 ## Documentation
 
-- [User Manual](docs/user-manual.html) — how to install and use the app.
-- [Technical Documentation](docs/technical-documentation.html) — architecture, packages, file/memory handling.
+- [User Manual](docs/user-manual.html): how to install and use the app.
+- [Technical Documentation](docs/technical-documentation.html): architecture, packages, file/memory handling.
 
 Open either HTML file in a browser. They also render on GitHub Pages if enabled.
 
@@ -33,7 +33,7 @@ installer\Output\PDFBench-Setup.exe
 
 It installs per-user (no admin prompt), adds a Start Menu entry (and an optional
 desktop shortcut), and registers an uninstaller. Then launch **PDF Bench** from
-the Start Menu — it opens in its own window (no browser, no console). First
+the Start Menu. It opens in its own window (no browser, no console). First
 launch takes ~15–20s while the bundle unpacks. An unsigned build triggers
 SmartScreen once: **More info → Run anyway**.
 
