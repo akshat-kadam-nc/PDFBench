@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PDF Bench — User Manual</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#fff; --line:#e3e7ee; --fg:#1b1f27; --mut:#5c6675;
+    --accent:#2f6fe0; --accent-soft:#e9f0fd; --code:#f2f4f8; --warn-bg:#fff6e6; --warn-line:#f0d9a8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0f1115; --card:#171a21; --line:#2a2f3a; --fg:#e7e9ee; --mut:#9aa3b2;
+      --accent:#5b9dff; --accent-soft:#16233c; --code:#0e1219; --warn-bg:#241d0e; --warn-line:#4a3c17;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .layout{max-width:1080px;margin:0 auto;padding:0 24px;display:grid;
+    grid-template-columns:230px 1fr;gap:40px}
+  header.top{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:34px 0 10px}
+  header.top .logo{width:52px;height:52px;flex:none}
+  header.top h1{margin:0;font-size:28px;letter-spacing:-.02em}
+  header.top p{margin:2px 0 0;color:var(--mut)}
+  nav{position:sticky;top:20px;align-self:start;font-size:14px;padding-top:8px}
+  nav a{display:block;color:var(--mut);text-decoration:none;padding:5px 0}
+  nav a:hover{color:var(--accent)}
+  nav .grp{font-weight:700;color:var(--fg);margin-top:14px;text-transform:uppercase;
+    font-size:11px;letter-spacing:.06em}
+  main{min-width:0;padding-bottom:80px}
+  h2{font-size:22px;margin:38px 0 10px;padding-top:8px;border-top:1px solid var(--line)}
+  h2:first-child{border-top:none;margin-top:8px}
+  h3{font-size:17px;margin:22px 0 6px}
+  p,li{color:var(--fg)}
+  a{color:var(--accent)}
+  code{background:var(--code);padding:2px 6px;border-radius:5px;font-size:.9em}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
+  .note{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:14px 0}
+  .warn{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:12px 16px;margin:14px 0}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:15px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600}
+  kbd{background:var(--code);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:.85em}
+  .pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:20px;
+    padding:1px 10px;font-size:13px;font-weight:600}
+  footer{grid-column:1/-1;border-top:1px solid var(--line);margin-top:30px;padding:20px 0 50px;color:var(--mut);font-size:14px}
+  @media(max-width:820px){.layout{grid-template-columns:1fr}nav{position:static}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <header class="top">
+    <svg class="logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="11" fill="#2563eb"/>
+      <g transform="rotate(9 24 25)">
+        <rect x="15" y="11" width="20" height="27" rx="2.5" fill="#fff"/>
+        <rect x="18.5" y="16" width="12" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="20" width="13.5" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="24" width="10" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="28" width="12.5" height="2" rx="1" fill="#94a3b8"/>
+      </g>
+      <path d="M31 30a7 7 0 1 1-2.2-5.1" fill="none" stroke="#facc15" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M29.5 21.5l.8 4.7 4-2z" fill="#facc15"/>
+    </svg>
+    <div>
+      <h1>PDF Bench — User Manual</h1>
+      <p>A local desktop toolbox for scanned and document PDFs. Everything runs on your machine.</p>
+    </div>
+  </header>
+
+  <nav>
+    <div class="grp">Getting started</div>
+    <a href="#what">What it is</a>
+    <a href="#install">Install</a>
+    <a href="#launch">Launch &amp; quit</a>
+    <div class="grp">Using it</div>
+    <a href="#working-doc">The working document</a>
+    <a href="#deskew">Deskew</a>
+    <a href="#compress">Compress</a>
+    <a href="#combos">Running combos</a>
+    <a href="#merge">Merge</a>
+    <a href="#organize">Organize pages</a>
+    <a href="#preview">Preview</a>
+    <a href="#history">History</a>
+    <a href="#theme">Light / dark</a>
+    <div class="grp">Good to know</div>
+    <a href="#privacy">Privacy &amp; storage</a>
+    <a href="#trouble">Troubleshooting</a>
+    <a href="#uninstall">Uninstall</a>
+  </nav>
+
+  <main>
+    <h2 id="what">What it is</h2>
+    <p>PDF Bench is a small Windows app for preparing and tidying PDF files. It was built to get
+    scanned book chapters ready for search/AI pipelines, and grew a handful of everyday PDF tools.
+    It runs entirely on your own computer — no accounts, no uploads, no internet required — and it
+    opens as a normal desktop window (not in your web browser).</p>
+    <p>Tools available today:</p>
+    <table>
+      <tr><th>Tool</th><th>What it does</th></tr>
+      <tr><td><span class="pill">Deskew</span></td><td>Straightens pages that a scanner tilted.</td></tr>
+      <tr><td><span class="pill">Compress</span></td><td>Shrinks file size by re-encoding the page images.</td></tr>
+      <tr><td><span class="pill">Merge</span></td><td>Combines several PDFs into one.</td></tr>
+      <tr><td><span class="pill">Organize</span></td><td>Reorder, rotate, and delete pages.</td></tr>
+      <tr><td><span class="pill">History</span></td><td>A local log of everything you've processed.</td></tr>
+    </table>
+    <div class="note">Every tool keeps the PDF's <strong>searchable text layer</strong> intact, so the
+    output still works for copy/paste, search, and text-extraction pipelines.</div>
+
+    <h2 id="install">Install</h2>
+    <ol>
+      <li>Double-click <code>PDFBench-Setup.exe</code>.</li>
+      <li>Windows may show a blue <strong>SmartScreen</strong> warning because the app isn't code-signed.
+        Click <strong>More info → Run anyway</strong>. (This is expected for independent apps.)</li>
+      <li>The installer runs <strong>per-user</strong> — no administrator password needed. Optionally tick
+        <strong>"Create a desktop shortcut."</strong></li>
+      <li>Finish, and optionally let it launch straight away.</li>
+    </ol>
+    <p>It installs to <code>%LocalAppData%\Programs\PDFBench</code>, adds a Start Menu entry, and
+    registers an uninstaller. No Python or other software is required.</p>
+
+    <h2 id="launch">Launch &amp; quit</h2>
+    <p>Open <strong>Start Menu → PDF Bench</strong> (or the desktop shortcut). The app opens in its own
+    window. <strong>The first launch each time takes about 15–20 seconds</strong> while it unpacks —
+    this is normal. Close the window to quit.</p>
+
+    <h2 id="working-doc">The working document</h2>
+    <p>PDF Bench is built around <strong>one working document</strong>. You load a PDF once; then every
+    tool acts on it and replaces it with the result. That means you can run several operations in a
+    row <strong>without re-uploading the file</strong>.</p>
+    <p>The bar at the top of a tool shows the current file name and a breadcrumb of what's been applied
+    (e.g. <code>deskew → compress</code>). Use <strong>Download</strong> to save the current result, or
+    <strong>Load new</strong> to start over with a different file.</p>
+
+    <h2 id="deskew">Deskew</h2>
+    <p>Straightens the small, consistent tilt an automatic-feed scanner introduces (odd pages lean one
+    way, even pages the other).</p>
+    <ul>
+      <li><strong>Deskew mode</strong> — <em>Hybrid</em> (default) measures each page and falls back to a
+        fixed angle if the measurement looks wrong; <em>Auto</em> trusts the measurement; <em>Fixed</em>
+        always applies the set angle.</li>
+      <li><strong>Direction</strong> — which way odd vs. even pages should rotate.</li>
+    </ul>
+    <p>After running, a per-page table shows the measured and applied angle so you can trust a large
+    batch at a glance. Deskew is <strong>lossless</strong> — the page image is rotated, not re-encoded.</p>
+
+    <h2 id="compress">Compress</h2>
+    <p>Reduces file size by downsampling and re-encoding each page's image.</p>
+    <ul>
+      <li><strong>Resolution (DPI)</strong> — lower means smaller files (110 is a good default).</li>
+      <li><strong>Color / Gray quality</strong> — JPEG quality for color and grayscale pages.</li>
+      <li><strong>Color handling</strong> — keep every page in color, decide per page automatically, or
+        force grayscale.</li>
+    </ul>
+
+    <h2 id="combos">Running several operations at once</h2>
+    <p>Each operation tab (Deskew, Compress) has a <strong>checkbox</strong>. Tick every operation you
+    want and press <strong>Run</strong> — they apply in order to the working file in one shot (the button
+    reads e.g. <strong>"Run Deskew + Compress"</strong>). Click a tab's name to edit that operation's
+    options; the checkbox controls whether it runs.</p>
+
+    <h2 id="merge">Merge</h2>
+    <p>Drop in several PDFs, reorder them (they auto-sort by filename), and combine them into one file.
+    The merged result becomes your working document, so you can then Compress or Organize it without
+    re-uploading. Merging is lossless.</p>
+
+    <h2 id="organize">Organize pages</h2>
+    <p>Shows a thumbnail of every page. You can:</p>
+    <ul>
+      <li><strong>Reorder</strong> — drag a page to a new position.</li>
+      <li><strong>Rotate</strong> — use the rotate buttons on a page.</li>
+      <li><strong>Delete</strong> — remove a page.</li>
+      <li><strong>Bulk actions</strong> — click pages to select them, then use <strong>Left / Right /
+        Delete</strong> at the top.</li>
+    </ul>
+    <p>Press <strong>Apply changes</strong> to rebuild the PDF. This is lossless and keeps the text layer.</p>
+
+    <h2 id="preview">Preview</h2>
+    <p>The right-hand panel shows the current working document. It updates after each operation, and it
+    does not reload when you switch tabs.</p>
+
+    <h2 id="history">History</h2>
+    <p>The <strong>History</strong> route (top-right) lists every file you've processed, with totals
+    (files, input vs. output size, space saved). Use <strong>Clear log</strong> to reset it. The log is
+    stored locally on your machine.</p>
+
+    <h2 id="theme">Light / dark mode</h2>
+    <p>Use the sun/moon button in the top-right to switch themes. PDF Bench follows your Windows
+    light/dark setting by default and remembers your choice.</p>
+
+    <h2 id="privacy">Privacy &amp; where files are stored</h2>
+    <ul>
+      <li><strong>Nothing leaves your computer.</strong> All processing happens locally; the app does not
+        connect to the internet.</li>
+      <li>Your source PDFs are never modified — you always get a <em>new</em> file when you Download.</li>
+      <li>The usage log lives at <code>%LocalAppData%\PDFBench\history.jsonl</code>.</li>
+    </ul>
+
+    <h2 id="trouble">Troubleshooting</h2>
+    <table>
+      <tr><th>Symptom</th><th>Fix</th></tr>
+      <tr><td>SmartScreen blocks the installer</td><td>Click <strong>More info → Run anyway</strong>. The app is unsigned but safe.</td></tr>
+      <tr><td>First launch is slow</td><td>Normal — the bundle unpacks on each start (~15–20s).</td></tr>
+      <tr><td>Window is blank / won't display</td><td>PDF Bench needs the <strong>Microsoft Edge WebView2 Runtime</strong>, which is preinstalled on current Windows 10/11. If missing, install it free from Microsoft, then relaunch.</td></tr>
+      <tr><td>A large file won't process</td><td>There's an 80&nbsp;MB per-file limit. Split very large books into chapters, or lower the DPI.</td></tr>
+      <tr><td>Download didn't prompt</td><td>Downloads save through the window's built-in viewer; check your Downloads folder.</td></tr>
+    </table>
+
+    <h2 id="uninstall">Uninstall</h2>
+    <p>Use <strong>Windows Settings → Apps → PDF Bench → Uninstall</strong>, or the "Uninstall PDF Bench"
+    Start Menu shortcut. Your history log is left in place; delete
+    <code>%LocalAppData%\PDFBench</code> if you want it gone too.</p>
+
+    <footer>PDF Bench — local PDF toolbox. This manual ships with the app.</footer>
+  </main>
+</div>
+</body>
+</html>

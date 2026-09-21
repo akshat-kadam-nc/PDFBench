@@ -16,6 +16,13 @@ Tabs:
 - **History** — a local log of every file processed, with totals (files, input
   vs. output size, space saved). Stored at `%LOCALAPPDATA%\PDFBench`.
 
+## Documentation
+
+- [User Manual](docs/user-manual.html) — how to install and use the app.
+- [Technical Documentation](docs/technical-documentation.html) — architecture, packages, file/memory handling.
+
+Open either HTML file in a browser. They also render on GitHub Pages if enabled.
+
 ## Install & run (Windows)
 
 Run the installer and launch it from the Start Menu:

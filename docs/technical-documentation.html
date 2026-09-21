@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PDF Bench — Technical Documentation</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#fff; --line:#e3e7ee; --fg:#1b1f27; --mut:#5c6675;
+    --accent:#2f6fe0; --accent-soft:#e9f0fd; --code:#f2f4f8; --warn-bg:#fff6e6; --warn-line:#f0d9a8;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0f1115; --card:#171a21; --line:#2a2f3a; --fg:#e7e9ee; --mut:#9aa3b2;
+      --accent:#5b9dff; --accent-soft:#16233c; --code:#0e1219; --warn-bg:#241d0e; --warn-line:#4a3c17;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  .layout{max-width:1100px;margin:0 auto;padding:0 24px;display:grid;
+    grid-template-columns:240px 1fr;gap:40px}
+  header.top{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:34px 0 10px}
+  header.top .logo{width:52px;height:52px;flex:none}
+  header.top h1{margin:0;font-size:28px;letter-spacing:-.02em}
+  header.top p{margin:2px 0 0;color:var(--mut)}
+  nav{position:sticky;top:20px;align-self:start;font-size:14px;padding-top:8px}
+  nav a{display:block;color:var(--mut);text-decoration:none;padding:5px 0}
+  nav a:hover{color:var(--accent)}
+  nav .grp{font-weight:700;color:var(--fg);margin-top:14px;text-transform:uppercase;font-size:11px;letter-spacing:.06em}
+  main{min-width:0;padding-bottom:80px}
+  h2{font-size:22px;margin:38px 0 10px;padding-top:8px;border-top:1px solid var(--line)}
+  h2:first-child{border-top:none;margin-top:8px}
+  h3{font-size:17px;margin:22px 0 6px}
+  a{color:var(--accent)}
+  code{background:var(--code);padding:2px 6px;border-radius:5px;font-size:.9em}
+  pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;font-size:13.5px;line-height:1.5}
+  pre code{background:none;padding:0}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
+  .note{background:var(--accent-soft);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:14px 0}
+  .warn{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:12px 16px;margin:14px 0}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--mut);font-weight:600}
+  .mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  footer{grid-column:1/-1;border-top:1px solid var(--line);margin-top:30px;padding:20px 0 50px;color:var(--mut);font-size:14px}
+  @media(max-width:820px){.layout{grid-template-columns:1fr}nav{position:static}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <header class="top">
+    <svg class="logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="11" fill="#2563eb"/>
+      <g transform="rotate(9 24 25)">
+        <rect x="15" y="11" width="20" height="27" rx="2.5" fill="#fff"/>
+        <rect x="18.5" y="16" width="12" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="20" width="13.5" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="24" width="10" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="28" width="12.5" height="2" rx="1" fill="#94a3b8"/>
+      </g>
+      <path d="M31 30a7 7 0 1 1-2.2-5.1" fill="none" stroke="#facc15" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M29.5 21.5l.8 4.7 4-2z" fill="#facc15"/>
+    </svg>
+    <div>
+      <h1>PDF Bench — Technical Documentation</h1>
+      <p>Architecture, packages, and how files and memory are handled under the hood.</p>
+    </div>
+  </header>
+
+  <nav>
+    <div class="grp">Overview</div>
+    <a href="#arch">Architecture</a>
+    <a href="#flow">Request flow</a>
+    <div class="grp">Backend</div>
+    <a href="#components">Components</a>
+    <a href="#endpoints">API endpoints</a>
+    <a href="#textlayer">Text-layer invariant</a>
+    <div class="grp">Frontend</div>
+    <a href="#ui">UI &amp; state</a>
+    <div class="grp">Runtime</div>
+    <a href="#memory">File &amp; memory handling</a>
+    <a href="#storage">Data &amp; storage</a>
+    <div class="grp">Build</div>
+    <a href="#packages">Packages</a>
+    <a href="#packaging">Packaging &amp; installer</a>
+    <a href="#build">Build from source</a>
+    <a href="#limits">Limits &amp; notes</a>
+  </nav>
+
+  <main>
+    <h2 id="arch">Architecture</h2>
+    <p>PDF Bench is a <strong>local full-stack app wrapped as a desktop window</strong>. Three layers:</p>
+    <table>
+      <tr><th>Layer</th><th>Technology</th><th>Role</th></tr>
+      <tr><td>Desktop shell</td><td>pywebview + Edge WebView2</td><td>Native window that displays the UI; no browser, no console.</td></tr>
+      <tr><td>Local server</td><td>FastAPI on Uvicorn (background thread)</td><td>Does the PDF work; serves the UI and a small JSON API on <code>127.0.0.1</code>.</td></tr>
+      <tr><td>Frontend</td><td>React (via CDN) in a single <code>index.html</code></td><td>The tabbed UI, rendered inside the native window.</td></tr>
+    </table>
+    <p>The whole thing is bundled by PyInstaller into one <code>PDFBench.exe</code>, and that exe is
+    wrapped by an Inno Setup installer.</p>
+
+    <h2 id="flow">Request flow</h2>
+    <pre><code>Start Menu → PDFBench.exe
+  └─ desktop.py
+       ├─ picks a free port (8765+)
+       ├─ starts Uvicorn(FastAPI app) on a daemon thread
+       └─ opens a WebView2 window at http://127.0.0.1:&lt;port&gt;
+            └─ index.html (React) ── fetch() ──▶ /api/* endpoints
+                                                    └─ *_core.py (PyMuPDF / pypdf)</code></pre>
+    <p>Closing the window ends the process; the daemon server thread is torn down with it.</p>
+
+    <h2 id="components">Components</h2>
+    <table>
+      <tr><th>File</th><th>Responsibility</th></tr>
+      <tr><td class="mono">desktop.py</td><td>Entry point. Picks a port, runs the server on a background thread, opens the native window (enables WebView2 downloads).</td></tr>
+      <tr><td class="mono">server/main.py</td><td>FastAPI app: request/response, size guards, error handling, and all endpoints. Serves <code>web/</code> (resolved from the PyInstaller bundle when frozen).</td></tr>
+      <tr><td class="mono">server/deskew_core.py</td><td>Skew detection (scikit-image via <code>deskew</code>), clamping and parity fallback; rotates each page as a lossless pypdf transform.</td></tr>
+      <tr><td class="mono">server/compress_core.py</td><td>Per-page image extraction, downsample and JPEG re-encode, then <code>replace_image</code> (PyMuPDF).</td></tr>
+      <tr><td class="mono">server/merge_core.py</td><td>Lossless pypdf merge.</td></tr>
+      <tr><td class="mono">server/organize_core.py</td><td>PyMuPDF page thumbnails; pypdf rebuild from a page order with per-page rotation.</td></tr>
+      <tr><td class="mono">server/history.py</td><td>Append-only JSONL usage log in a per-user data directory.</td></tr>
+      <tr><td class="mono">web/index.html</td><td>Single-file React frontend (all tabs, state, styling).</td></tr>
+    </table>
+
+    <h2 id="endpoints">API endpoints</h2>
+    <table>
+      <tr><th>Method / path</th><th>Purpose</th></tr>
+      <tr><td class="mono">POST /api/process</td><td>Deskew and/or compress a single PDF (flags select which). Returns the new PDF; report in the <code>X-Report</code> header.</td></tr>
+      <tr><td class="mono">POST /api/merge</td><td>Merge several PDFs into one.</td></tr>
+      <tr><td class="mono">POST /api/pages</td><td>Return small PNG thumbnails (data URLs) for every page — used by Organize.</td></tr>
+      <tr><td class="mono">POST /api/organize</td><td>Rebuild a PDF from a new page order with per-page rotation/deletion.</td></tr>
+      <tr><td class="mono">GET&nbsp;/api/history</td><td>Return the usage log and totals.</td></tr>
+      <tr><td class="mono">DELETE /api/history</td><td>Clear the usage log.</td></tr>
+      <tr><td class="mono">GET&nbsp;/healthz</td><td>Liveness + configured upload limit.</td></tr>
+    </table>
+
+    <h2 id="textlayer">The text-layer invariant</h2>
+    <div class="note"><strong>The searchable text layer is never rasterized.</strong> This is the core
+    correctness rule, because the output feeds text-extraction / RAG pipelines.</div>
+    <ul>
+      <li><strong>Deskew</strong> applies a pypdf page rotation transform — the page's content stream and
+        text are untouched; only the visual angle changes.</li>
+      <li><strong>Compress</strong> replaces the embedded <em>page image</em> with a smaller re-encoded
+        image (extract → JPEG draft-decode → resize → recompress). The text layer sits above the image
+        and is left alone.</li>
+      <li><strong>Merge / Organize</strong> are structural pypdf operations (copy pages, set <code>/Rotate</code>),
+        so text is copied verbatim.</li>
+    </ul>
+
+    <h2 id="ui">Frontend &amp; state</h2>
+    <p>The UI is one React tree (Babel-in-browser, no build step). Key ideas:</p>
+    <ul>
+      <li><strong>Working document</strong> lives in top-level state as a <code>File</code>. Each tool sends
+        it to an endpoint and replaces it with the result (a new <code>File</code> built from the response
+        blob), so operations chain with no re-upload.</li>
+      <li><strong>Pipeline selection</strong> is on the tabs: Deskew/Compress carry checkboxes; one Run
+        sends both flags to <code>/api/process</code> in one call.</li>
+      <li><strong>Preview</strong> is a persistent right-hand column; it uses WebView2's built-in PDF
+        viewer via an <code>&lt;iframe&gt;</code> pointed at an object URL, so switching tabs doesn't reload it.</li>
+      <li><strong>Theme</strong> is CSS custom properties toggled via a <code>data-theme</code> attribute,
+        defaulting to the OS preference and persisted in <code>localStorage</code>.</li>
+    </ul>
+
+    <h2 id="memory">File &amp; memory handling</h2>
+    <ul>
+      <li><strong>In-memory processing.</strong> Uploads are read into memory (<code>bytes</code>) and each
+        stage passes bytes to the next; results are streamed straight back in the HTTP response. Source
+        files on disk are never modified.</li>
+      <li><strong>Size guard.</strong> Every upload is checked against <code>MAX_UPLOAD_MB</code> (default
+        80&nbsp;MB) and rejected with a clear error if larger.</li>
+      <li><strong>Memory hygiene.</strong> Large intermediates are released and <code>gc.collect()</code> is
+        called between deskew and compress. <code>MemoryError</code> is caught and returned as a friendly
+        507 rather than crashing.</li>
+      <li><strong>Thumbnails</strong> are rendered at ~20% scale and returned as base64 data URLs, kept only
+        for the current Organize session.</li>
+      <li><strong>Frozen-exe unpack.</strong> As a PyInstaller one-file build, the exe unpacks to a temp
+        directory on each launch (the ~15–20s first-start cost) and the bundled <code>web/</code> is
+        resolved from that path.</li>
+      <li><strong>Downloads.</strong> Handled by WebView2 (enabled explicitly in <code>desktop.py</code>);
+        the browser layer writes the file, the Python side never persists outputs.</li>
+    </ul>
+
+    <h2 id="storage">Data &amp; storage</h2>
+    <table>
+      <tr><th>What</th><th>Where</th></tr>
+      <tr><td>Installed app</td><td class="mono">%LocalAppData%\Programs\PDFBench\</td></tr>
+      <tr><td>Usage log (JSONL)</td><td class="mono">%LocalAppData%\PDFBench\history.jsonl</td></tr>
+      <tr><td>Network</td><td>None. Binds only to <code>127.0.0.1</code>; no outbound connections, no telemetry.</td></tr>
+    </table>
+    <p>The log is append-only (one JSON object per line) so each write is O(1) and prior data is never
+    rewritten; it lives outside the install directory and survives reinstalls.</p>
+
+    <h2 id="packages">Packages</h2>
+    <h3>Runtime (Python)</h3>
+    <table>
+      <tr><th>Package</th><th>Version</th><th>Used for</th></tr>
+      <tr><td>fastapi</td><td>0.141.1</td><td>HTTP app / routing</td></tr>
+      <tr><td>uvicorn[standard]</td><td>0.52.4</td><td>ASGI server</td></tr>
+      <tr><td>python-multipart</td><td>0.0.32</td><td>Multipart file uploads</td></tr>
+      <tr><td>pypdf</td><td>6.18.0</td><td>Lossless rotate / merge / rebuild</td></tr>
+      <tr><td>PyMuPDF</td><td>1.28.2</td><td>Render pages, image extract/replace, thumbnails</td></tr>
+      <tr><td>deskew</td><td>1.6.1</td><td>Skew-angle detection</td></tr>
+      <tr><td>scikit-image</td><td>0.26.0</td><td>Image analysis (deskew dependency)</td></tr>
+      <tr><td>scipy</td><td>1.17.1</td><td>Numerical support</td></tr>
+      <tr><td>numpy</td><td>2.4.6</td><td>Arrays</td></tr>
+      <tr><td>Pillow</td><td>12.3.0</td><td>Image encode/resize; icon generation</td></tr>
+      <tr><td>pywebview</td><td>6.2.1</td><td>Native desktop window (Edge WebView2 via pythonnet)</td></tr>
+    </table>
+    <h3>Frontend</h3>
+    <p>React 18 + ReactDOM + Babel standalone, loaded from CDN and inlined into a single
+    <code>index.html</code>. No bundler, no node_modules.</p>
+    <h3>Build / packaging</h3>
+    <table>
+      <tr><td>PyInstaller</td><td>One-file, windowed executable</td></tr>
+      <tr><td>Inno Setup 6</td><td>Windows installer (shortcuts, uninstaller)</td></tr>
+      <tr><td>Microsoft Edge WebView2 Runtime</td><td>Rendering engine for the window (preinstalled on modern Windows)</td></tr>
+    </table>
+
+    <h2 id="packaging">Packaging &amp; installer</h2>
+    <p><strong>Executable</strong> — <code>build_exe.bat</code> runs PyInstaller with
+    <code>--onefile --windowed --icon assets\PDFBench.ico</code>, collecting the heavy native libs
+    (scikit-image, scipy, PyMuPDF, deskew, pywebview) and bundling <code>web/</code>. Output:
+    <code>dist\PDFBench.exe</code> (~120&nbsp;MB).</p>
+    <p><strong>Installer</strong> — <code>installer\PDFBench.iss</code> (Inno Setup) packages that exe into
+    <code>installer\Output\PDFBench-Setup.exe</code>. It installs per-user (no admin), creates Start Menu
+    and optional desktop shortcuts, and registers an uninstaller. The exe is <strong>unsigned</strong>, so
+    Windows SmartScreen warns once on first run.</p>
+
+    <h2 id="build">Build from source</h2>
+    <pre><code>run.bat            # dev: create .venv, run the server in a browser
+build_exe.bat      # build dist\PDFBench.exe (windowed one-file)
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\PDFBench.iss   # installer</code></pre>
+    <p>Requires Python 3.11 and (for the installer) Inno Setup 6 on the build machine only. The
+    <code>.venv</code>, <code>build/</code>, <code>dist/</code>, <code>*.spec</code>, and
+    <code>installer/Output/</code> are regenerated, not committed.</p>
+
+    <h2 id="limits">Limits &amp; notes</h2>
+    <ul>
+      <li>Single-file upload limit: <strong>80&nbsp;MB</strong> (<code>MAX_UPLOAD_MB</code>).</li>
+      <li>The app is Windows-only as packaged (WebView2 + Inno Setup); the Python app itself is
+        cross-platform.</li>
+      <li>A <code>Dockerfile</code> and <code>render.yaml</code> remain from an abandoned cloud-hosting
+        experiment; the shipping path is the local desktop app.</li>
+      <li>No code signing; distribute with a checksum and expect the SmartScreen prompt.</li>
+    </ul>
+
+    <footer>PDF Bench — technical reference. Generated for the current build.</footer>
+  </main>
+</div>
+</body>
+</html>
