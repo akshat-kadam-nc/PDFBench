@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from .deskew_core import Options as DeskewOptions, deskew_pdf_bytes
 from .compress_core import CompressOptions, compress_pdf_bytes
 from .merge_core import merge_pdfs
+from .organize_core import render_thumbs, organize as organize_pdf
 from . import history
 
 logging.basicConfig(
@@ -183,6 +184,44 @@ async def merge(files: list[UploadFile] = File(...), name: str = Form("book")):
     history.record({"op": "merge", "name": out_name,
                     "inputs": [n for n, _ in parts], "pages": report.get("total_pages"),
                     "in_bytes": sum(len(d) for _, d in parts), "out_bytes": report["out_bytes"]})
+    return _pdf_response(out, out_name, report)
+
+
+@app.post("/api/pages")
+async def pages(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "Please upload a .pdf file.")
+    data = await file.read()
+    _check_size(file.filename, data)
+    try:
+        return render_thumbs(data)
+    except Exception as e:  # noqa: BLE001
+        log.exception("thumbnails failed: %s", file.filename)
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+
+
+@app.post("/api/organize")
+async def organize_ep(file: UploadFile = File(...), ops: str = Form(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "Please upload a .pdf file.")
+    data = await file.read()
+    _check_size(file.filename, data)
+    try:
+        op_list = json.loads(ops)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "Invalid page operations.")
+    if not op_list:
+        raise HTTPException(400, "Keep at least one page.")
+    try:
+        out, report = organize_pdf(data, op_list)
+    except Exception as e:  # noqa: BLE001
+        log.exception("organize failed: %s", file.filename)
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+    report["in_bytes"] = len(data)
+    stem = os.path.splitext(os.path.basename(file.filename))[0]
+    out_name = f"{stem}_organized.pdf"
+    history.record({"op": "organize", "name": out_name, "inputs": [file.filename],
+                    "pages": report["pages"], "in_bytes": len(data), "out_bytes": len(out)})
     return _pdf_response(out, out_name, report)
 
 

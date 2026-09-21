@@ -130,6 +130,24 @@
   .btn.ghost{margin-top:0;background:var(--card);color:var(--fg);border:1px solid var(--line)}
   .btn.ghost:hover{background:var(--tab-on);color:var(--tab-on-fg)}
   .chk.combo{margin:16px 0 2px}
+  .orgbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:16px}
+  .orgcount{font-size:13px;color:var(--mut);font-weight:600}
+  .orgacts{display:flex;gap:8px;flex-wrap:wrap}
+  .orgacts .btn{display:inline-flex;align-items:center;gap:6px}
+  .pagegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:16px}
+  .pagecell{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:8px;
+    cursor:grab;transition:border-color .12s,box-shadow .12s;user-select:none}
+  .pagecell:hover{border-color:var(--accent2)}
+  .pagecell.sel{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+  .pagethumbwrap{height:180px;display:flex;align-items:center;justify-content:center;
+    background:#fff;border-radius:6px;overflow:hidden}
+  .pagethumb{max-width:100%;max-height:100%;transition:transform .15s;box-shadow:0 1px 4px #0003}
+  .pagefoot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .pagenum{font-size:13px;font-weight:600;color:var(--fg)}
+  .pageacts{display:flex;gap:2px}
+  .pageacts button{background:transparent;border:none;color:var(--mut);cursor:pointer;
+    padding:4px;border-radius:6px;display:flex;align-items:center}
+  .pageacts button:hover{background:var(--tab-on);color:var(--tab-on-fg)}
 </style>
 </head>
 <body>
@@ -145,6 +163,10 @@ function Icon({name,size=16}){
     deskew:<><path d="M21 12a9 9 0 1 1-3.2-6.9"/><polyline points="21 3 21 9 15 9"/></>,
     compress:<><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></>,
     merge:<><path d="M7 3v4.5l5 4 5-4V3"/><line x1="12" y1="11.5" x2="12" y2="21"/></>,
+    organize:<><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+    rotL:<><path d="M3 12a9 9 0 1 0 3-6.7"/><polyline points="3 3 3 9 9 9"/></>,
+    rotR:<><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></>,
+    trash:<><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>,
     history:<><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></>,
     sun:<><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6" y2="6"/><line x1="18" y1="18" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6" y2="18"/><line x1="18" y1="6" x2="19.8" y2="4.2"/></>,
     moon:<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>,
@@ -531,6 +553,115 @@ function HistoryTab(){
   );
 }
 
+// Organize pages: thumbnail grid with drag-to-reorder, per-page rotate/delete,
+// and bulk actions. Applies losslessly (pypdf) and replaces the working doc.
+function OrganizeTab({doc, pick, applyResult, download, clear}){
+  const [pages,setPages]=useState(null);   // [{id, orig, rot}]
+  const [thumbs,setThumbs]=useState({});    // orig index -> data URL
+  const [sel,setSel]=useState(()=>new Set());
+  const [loading,setLoading]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState(null);
+  const dragId=useRef(null);
+
+  useEffect(()=>{
+    if(!doc){ setPages(null); setThumbs({}); setSel(new Set()); return; }
+    let dead=false;
+    (async()=>{
+      setLoading(true); setErr(null);
+      try{
+        const fd=new FormData(); fd.append("file",doc.file);
+        const res=await fetch("/api/pages",{method:"POST",body:fd});
+        if(!res.ok) throw await errorFromResponse(res);
+        const data=await res.json();
+        if(dead) return;
+        const tm={}; data.pages.forEach(p=>tm[p.i]=p.thumb);
+        setThumbs(tm);
+        setPages(data.pages.map(p=>({id:"p"+p.i, orig:p.i, rot:0})));
+        setSel(new Set());
+      }catch(e){ if(!dead) setErr(describeError(e)); }
+      finally{ if(!dead) setLoading(false); }
+    })();
+    return ()=>{ dead=true; };
+  },[doc&&doc.file]);
+
+  const rotate=(id,d)=>setPages(ps=>ps.map(p=>p.id===id?{...p,rot:(p.rot+d+360)%360}:p));
+  const del=(id)=>{ setPages(ps=>ps.filter(p=>p.id!==id)); setSel(s=>{const n=new Set(s);n.delete(id);return n;}); };
+  const toggleSel=(id)=>setSel(s=>{const n=new Set(s); n.has(id)?n.delete(id):n.add(id); return n;});
+  const rotateSel=(d)=>setPages(ps=>ps.map(p=>sel.has(p.id)?{...p,rot:(p.rot+d+360)%360}:p));
+  const delSel=()=>{ setPages(ps=>ps.filter(p=>!sel.has(p.id))); setSel(new Set()); };
+
+  const onDrop=(id)=>{
+    const from=dragId.current; dragId.current=null;
+    if(!from||from===id) return;
+    setPages(ps=>{
+      const a=[...ps]; const fi=a.findIndex(p=>p.id===from); const ti=a.findIndex(p=>p.id===id);
+      if(fi<0||ti<0) return ps;
+      const [m]=a.splice(fi,1); a.splice(ti,0,m); return a;
+    });
+  };
+
+  const apply=useCallback(async()=>{
+    if(!pages||pages.length===0){ setErr("Keep at least one page."); return; }
+    setBusy(true); setErr(null);
+    try{
+      const ops=pages.map(p=>({index:p.orig, rotate:p.rot}));
+      const fd=new FormData(); fd.append("file",doc.file); fd.append("ops",JSON.stringify(ops));
+      const res=await fetch("/api/organize",{method:"POST",body:fd});
+      if(!res.ok) throw await errorFromResponse(res);
+      const blob=await res.blob();
+      applyResult(blob,["organized"]);   // new working doc; effect re-renders thumbs
+    }catch(e){ setErr(describeError(e)); }
+    finally{ setBusy(false); }
+  },[pages,doc,applyResult]);
+
+  if(!doc)
+    return <div className="card">
+      <Drop busy={false} label="Drag & drop a PDF to organize" sub="or click to choose a file"
+        accept="application/pdf" multiple={false} onFiles={pick}/>
+    </div>;
+
+  return (
+    <div className="card">
+      <DocBar doc={doc} onDownload={download} onClear={clear} busy={busy}/>
+      <div className="orgbar">
+        <span className="orgcount">{pages?pages.length:0} pages{sel.size?` · ${sel.size} selected`:""}</span>
+        <div className="orgacts">
+          <button className="btn ghost" onClick={()=>rotateSel(-90)} disabled={!sel.size}><Icon name="rotL"/> Left</button>
+          <button className="btn ghost" onClick={()=>rotateSel(90)} disabled={!sel.size}><Icon name="rotR"/> Right</button>
+          <button className="btn ghost" onClick={delSel} disabled={!sel.size}><Icon name="trash"/> Delete</button>
+          <button className="btn" onClick={apply} disabled={busy||!pages||!pages.length}>{busy?"Applying…":"Apply changes"}</button>
+        </div>
+      </div>
+      <div className="hint">Drag a page to reorder · click to select (bulk rotate/delete) · use the buttons on each page.</div>
+      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+      {loading
+        ? <div className="hint" style={{marginTop:18}}>Rendering page thumbnails…</div>
+        : <div className="pagegrid">
+            {pages&&pages.map((p,idx)=>(
+              <div key={p.id} className={"pagecell"+(sel.has(p.id)?" sel":"")}
+                draggable onDragStart={()=>dragId.current=p.id}
+                onDragOver={e=>e.preventDefault()} onDrop={()=>onDrop(p.id)}
+                onClick={()=>toggleSel(p.id)}>
+                <div className="pagethumbwrap">
+                  <img className="pagethumb" src={thumbs[p.orig]} alt={"page "+(idx+1)}
+                    style={{transform:`rotate(${p.rot}deg)`}}/>
+                </div>
+                <div className="pagefoot">
+                  <span className="pagenum">{idx+1}</span>
+                  <span className="pageacts">
+                    <button title="Rotate left" onClick={e=>{e.stopPropagation();rotate(p.id,-90);}}><Icon name="rotL"/></button>
+                    <button title="Rotate right" onClick={e=>{e.stopPropagation();rotate(p.id,90);}}><Icon name="rotR"/></button>
+                    <button title="Delete page" onClick={e=>{e.stopPropagation();del(p.id);}}><Icon name="trash"/></button>
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>}
+    </div>
+  );
+}
+
 function App(){
   const [theme,setTheme]=useTheme();
   const [tab,setTab]=useState("deskew");            // which panel is viewed
@@ -627,11 +758,14 @@ function App(){
         <OpTab id="deskew" label="Deskew" icon="deskew" active={tab==="deskew"} checked={ops.deskew} onView={setTab} onToggle={toggleOp}/>
         <OpTab id="compress" label="Compress" icon="compress" active={tab==="compress"} checked={ops.compress} onView={setTab} onToggle={toggleOp}/>
         <NavTab id="merge" label="Merge" icon="merge" active={tab==="merge"} onView={setTab}/>
+        <NavTab id="organize" label="Organize" icon="organize" active={tab==="organize"} onView={setTab}/>
         <div className="tabspacer"></div>
         <NavTab id="history" label="History" icon="history" variant="log" active={tab==="history"} onView={setTab}/>
       </div>
       {tab==="history"
         ? <HistoryTab/>
+        : tab==="organize"
+        ? <OrganizeTab doc={doc} pick={pick} applyResult={applyResult} download={download} clear={()=>setDoc(null)}/>
         : <div className="workspace">
             <div className="workmain">
               {(tab==="deskew"||tab==="compress")
