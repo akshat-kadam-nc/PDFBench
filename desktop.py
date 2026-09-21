@@ -1,11 +1,11 @@
-"""Desktop entry point: run DeskewPDF as a native desktop application.
+"""Desktop entry point: run PDF Bench as a native desktop application.
 
 Starts the local FastAPI server on a background thread, then shows the app's
 UI in a native OS window (Windows Edge WebView2) instead of a web browser.
 Closing the window quits everything. No browser, no console window.
 
 Used both for `python desktop.py` and as the PyInstaller build target that
-produces the standalone windowed DeskewPDF.exe.
+produces the standalone windowed PDFBench.exe.
 """
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from server.main import app
 
 HOST = "127.0.0.1"
 PREFERRED_PORT = 8765
-WINDOW_TITLE = "DeskewPDF"
+WINDOW_TITLE = "PDF Bench"
 
 
 def pick_port() -> int:

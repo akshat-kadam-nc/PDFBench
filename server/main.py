@@ -33,7 +33,7 @@ else:
 # Guard rails
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "80"))
 
-app = FastAPI(title="DeskewPDF")
+app = FastAPI(title="PDF Bench")
 
 
 def _peak_mem_mb() -> float | None:

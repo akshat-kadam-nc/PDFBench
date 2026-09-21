@@ -1,4 +1,4 @@
-"""Local usage log for DeskewPDF.
+"""Local usage log for PDF Bench.
 
 Every processed / merged file is appended as one JSON line to a history file in
 a per-user data directory. Append-only JSONL keeps writes O(1) (no rewrite of
@@ -22,7 +22,7 @@ def data_dir() -> str:
     else:
         base = os.environ.get("XDG_DATA_HOME") or os.path.join(
             os.path.expanduser("~"), ".local", "share")
-    d = os.path.join(base, "DeskewPDF")
+    d = os.path.join(base, "PDFBench")
     os.makedirs(d, exist_ok=True)
     return d
 

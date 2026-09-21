@@ -1,31 +1,32 @@
-; DeskewPDF installer (Inno Setup 6)
-; Build:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\DeskewPDF.iss
-; Output: installer\Output\DeskewPDF-Setup.exe
+; PDF Bench installer (Inno Setup 6)
+; Build:  "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\PDFBench.iss
+; Output: installer\Output\PDFBench-Setup.exe
 ;
-; Packages the standalone dist\DeskewPDF.exe (built by build_exe.bat) into a
+; Packages the standalone dist\PDFBench.exe (built by build_exe.bat) into a
 ; single Setup.exe. End users need nothing else installed — no Python, no
 ; Inno Setup. Installs per-user by default (no admin prompt); the user may
 ; choose an all-users install if they have admin rights.
 
-#define AppName "DeskewPDF"
+#define AppName "PDF Bench"
 #define AppVersion "1.0.0"
 #define AppPublisher "Next Platforms"
-#define AppExeName "DeskewPDF.exe"
+#define AppExeName "PDFBench.exe"
+#define AppDirName "PDFBench"
 
 [Setup]
-AppId={{9B2F7C41-3A6E-4D8B-9E1A-DESKEWPDF0001}
+AppId={{7C4A9E22-1F6B-4D3A-A8E5-PDFBENCH00001}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-DefaultDirName={autopf}\{#AppName}
+DefaultDirName={autopf}\{#AppDirName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 ; Per-user by default => no admin/UAC prompt; user can opt into all-users.
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=Output
-OutputBaseFilename=DeskewPDF-Setup
-SetupIconFile=..\assets\DeskewPDF.ico
+OutputBaseFilename=PDFBench-Setup
+SetupIconFile=..\assets\PDFBench.ico
 UninstallDisplayIcon={app}\{#AppExeName}
 Compression=lzma2/max
 SolidCompression=yes

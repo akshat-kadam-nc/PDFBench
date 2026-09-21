@@ -1,5 +1,5 @@
 @echo off
-REM Build the standalone DeskewPDF.exe (Windows). Output: dist\DeskewPDF.exe
+REM Build the standalone PDFBench.exe (Windows). Output: dist\PDFBench.exe
 setlocal
 cd /d "%~dp0"
 
@@ -11,8 +11,8 @@ if not exist "%PY%" (
 
 "%PY%" -m pip install --quiet --disable-pip-version-check pyinstaller
 
-"%PY%" -m PyInstaller --onefile --windowed --name DeskewPDF ^
-  --icon "assets\DeskewPDF.ico" ^
+"%PY%" -m PyInstaller --onefile --windowed --name PDFBench ^
+  --icon "assets\PDFBench.ico" ^
   --add-data "web;web" ^
   --collect-all skimage ^
   --collect-all scipy ^
@@ -25,5 +25,5 @@ if not exist "%PY%" (
   --noconfirm --clean desktop.py
 
 echo.
-echo Done. Share dist\DeskewPDF.exe
+echo Done. Share dist\PDFBench.exe
 pause

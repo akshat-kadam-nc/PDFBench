@@ -1,11 +1,11 @@
-# DeskewPDF — Handoff
+# PDF Bench — Handoff
 
 Paste this context into Claude Code on a new machine (after cloning the repo) to
 continue work with full context.
 
 ---
 
-I'm continuing work on **DeskewPDF**, a project already built in a previous
+I'm continuing work on **PDF Bench** (formerly DeskewPDF), a project already built in a previous
 session. Here's the full context.
 
 **What it is:** A local full-stack tool to prepare scanned book chapters for a
@@ -18,7 +18,7 @@ and even pages the other by a near-constant angle; (2) **compresses** them; and
 **installable Windows `.exe`** that anyone can download and install on their own
 machine, then run locally in their browser. All processing happens on the
 user's machine (no server, no cost, full OCR). Right now there is a working
-*portable* onefile exe (`build_exe.bat` → `dist\DeskewPDF.exe`, ~112 MB) that
+*portable* onefile exe (`build_exe.bat` → `dist\PDFBench.exe`, ~112 MB) that
 runs but is not yet a polished installable product. The next work is to turn it
 into a real installer and app:
 - Wrap it with an installer (Inno Setup or NSIS) that installs to Program Files,
@@ -63,7 +63,7 @@ into a real installer and app:
   `render.yaml` are left in the repo but are NOT the path forward. **Do not
   re-suggest cloud hosting** — the deliverable is a local installable app.
 - **The path forward: a standalone, installable Windows `.exe`.** Current state:
-  `build_exe.bat` → PyInstaller → `dist\DeskewPDF.exe` (~112 MB), a working
+  `build_exe.bat` → PyInstaller → `dist\PDFBench.exe` (~112 MB), a working
   portable onefile. `desktop.py` is the entry point (picks a free port, starts
   the FastAPI server, opens the browser); `main.py` resolves `web/` from
   `sys._MEIPASS` when frozen. Next step is packaging this into a real installer
@@ -75,6 +75,6 @@ into a real installer and app:
 **Everything is committed and pushed; working tree is clean.** Start by
 confirming the app runs via `run.bat`, then rebuild the current exe with
 `build_exe.bat` to verify the baseline. Then work on the PRIMARY GOAL: turning
-`dist\DeskewPDF.exe` into a proper downloadable, installable Windows app
+`dist\PDFBench.exe` into a proper downloadable, installable Windows app
 (installer + shortcuts + icon). Propose an installer approach (Inno Setup / NSIS)
 before building. Never break the OCR text layer.

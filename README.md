@@ -1,116 +1,100 @@
-# DeskewPDF
+# PDF Bench
 
-Local full-stack tool to prepare scanned book chapters: **straighten** the
-predictable ADF-scanner tilt, **compress** each chapter, and **merge** the
-chapters into the finished book.
+A local desktop toolbox for scanned PDFs: **deskew** the predictable ADF-scanner
+tilt, **compress** each chapter, and **merge** chapters into the finished book.
+Everything runs on your own machine — no server, no cloud, and the searchable
+OCR text layer is always preserved (so the output still feeds a RAG pipeline).
 
-Two tabs:
+Tabs:
 
-- **Deskew & Compress** — drop one chapter PDF. Deskew rotates each page around
-  its center as a **lossless transform** (scan image not re-encoded, OCR text
-  layer stays selectable). Compress downsamples the page image to a target DPI
-  and re-encodes it, deciding color per page automatically: pages that are
-  basically black text become grayscale, pages with color figures stay color.
-- **Merge** — drop all the processed chapters, order them (auto-sorted by
-  filename), and combine into one PDF. Lossless. Tells you if the result is
-  under 10 MB.
+- **Deskew & Compress** — choose one chapter PDF, set options, click **Start**.
+  Deskew rotates each page around its center as a **lossless transform** (scan
+  image not re-encoded, OCR text layer stays selectable). Compress downsamples
+  the page image to a target DPI and re-encodes it, deciding color per page.
+- **Merge** — add processed chapters, order them (auto-sorted by filename), and
+  combine into one lossless PDF.
+- **History** — a local log of every file processed, with totals (files, input
+  vs. output size, space saved). Stored at `%LOCALAPPDATA%\PDFBench`.
 
-### Size expectations
+## Install & run (Windows)
 
-300 pages of textured color textbook scans won't fit under 10 MB in one file at
-readable quality — that needs JBIG2/MRC, which harms color diagrams. At the
-default 120 DPI adaptive settings expect roughly 20–30 MB for the whole book.
-Lower the DPI (e.g. 100) for smaller files, or split the book into volumes with
-the Merge tab if you need each file under a hard cap.
+Run the installer and launch it from the Start Menu:
 
-## Run it
+```
+installer\Output\PDFBench-Setup.exe
+```
 
-Double-click **`run.bat`**.
+It installs per-user (no admin prompt), adds a Start Menu entry (and an optional
+desktop shortcut), and registers an uninstaller. Then launch **PDF Bench** from
+the Start Menu — it opens in its own window (no browser, no console). First
+launch takes ~15–20s while the bundle unpacks. An unsigned build triggers
+SmartScreen once: **More info → Run anyway**.
 
-The first run creates a virtual environment and installs dependencies (takes a
-minute); after that it starts instantly and opens your browser at
-<http://127.0.0.1:8765>.
+To share with a teammate, send them that one `PDFBench-Setup.exe`. They need no
+Python and nothing else installed.
 
-## How correction is decided
+## Build from source
 
-- **Hybrid** (default): measures each page's real skew, clamps it to a sane
-  band (0.3°–2.5°), and falls back to the fixed parity angle if measurement
-  fails or points the wrong way.
+```
+run.bat            # dev: creates .venv, runs the server in your browser
+build_exe.bat      # builds dist\PDFBench.exe (windowed onefile)
+```
+
+Then compile the installer with Inno Setup 6:
+
+```
+"C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer\PDFBench.iss
+```
+
+`desktop.py` is the app entry point: it starts the local FastAPI server on a
+background thread and shows the UI in a native window (Edge WebView2). It also
+runs with `python desktop.py` during development.
+
+## How deskew correction is decided
+
+- **Hybrid** (default): measures each page's real skew, clamps it to a sane band
+  (0.3°–2.5°), and falls back to the fixed parity angle if measurement fails or
+  points the wrong way.
 - **Auto**: trust the measured skew (clamped only at the top).
 - **Fixed**: ignore measurement, always apply the fixed parity angle.
-
-Controls in the UI:
-- **Fallback tilt** — magnitude used for fixed/fallback (default 1.4°).
-- **Direction** — which way odd vs. even pages rotate.
 
 The result table shows, per page, the measured and applied angle plus which
 method was used, so a large batch is easy to trust at a glance.
 
-## Share it as a standalone app (no install, no server)
+### Size expectations
 
-The heavy work (rendering, skew detection, image recompression) is too much for
-a small cloud instance's RAM. The robust way to share it is to run it on each
-user's own machine — which keeps the searchable OCR text layer intact (needed
-for RAG) and costs nothing.
-
-Build a single self-contained Windows executable:
-
-```
-build_exe.bat        (after run.bat has created the .venv once)
-```
-
-This produces `dist\DeskewPDF.exe` (~110 MB). Send that one file to a teammate.
-They double-click it, their browser opens to the app, and everything runs
-locally. Closing the console window quits it. First launch takes ~15–20s while
-the bundle unpacks.
-
-`desktop.py` is the entry point (starts the server, opens the browser); it also
-works with `python desktop.py` during development.
-
-## Deploy to Render (shareable URL)
-
-No database required — the tool is stateless. The repo is containerized
-(`Dockerfile`) and includes a Render Blueprint (`render.yaml`).
-
-1. Push this repo to GitHub.
-2. In Render: **New + → Blueprint**, pick the repo. It reads `render.yaml` and
-   creates a Docker web service on the free plan.
-3. Wait for the build (a few minutes), then open the service URL and share it.
-
-Notes:
-- **Free plan sleeps when idle** — the first request after a lull takes ~30–60s
-  to wake, then it's fast.
-- Free plan has 512 MB RAM; processing one chapter at a time stays well within
-  it. Deskew/compress a big chapter, not the whole 300-page book at once.
-- Not a fit for Vercel: its serverless functions cap request bodies at ~4.5 MB
-  (chapters are larger) and limit execution time. Render runs it as a normal
-  long-lived server with no such caps.
-
-Run the container locally to test:
-
-```
-docker build -t deskewpdf .
-docker run -p 8000:8000 deskewpdf   # then open http://localhost:8000
-```
+300 pages of textured color textbook scans won't fit under 10 MB in one file at
+readable quality. At the default adaptive settings expect roughly 20–30 MB for a
+whole book. Lower the DPI for smaller files, or split into volumes with Merge.
 
 ## Layout
 
 ```
-DeskewPDF/
-  run.bat                 local launcher (double-click)
-  Dockerfile              container for Render / Railway / Fly.io
-  render.yaml             Render Blueprint
+PDFBench/
+  desktop.py              app entry point (native window + local server)
+  run.bat                 dev launcher (browser)
+  build_exe.bat           builds dist\PDFBench.exe
+  installer/
+    PDFBench.iss          Inno Setup installer script
+  assets/
+    PDFBench.ico          app icon
   server/
-    main.py               FastAPI app: serves UI + /api/process + /api/merge
+    main.py               FastAPI app: UI + /api/process + /api/merge + /api/history
     deskew_core.py        rotation + skew detection
     compress_core.py      per-page adaptive image recompression
     merge_core.py         lossless PDF merge
+    history.py            local usage log (JSONL)
     requirements.txt
   web/
-    index.html            React single-page frontend (drag & drop)
+    index.html            React single-page frontend
 ```
+
+The repo also contains a `Dockerfile` and `render.yaml` from an earlier
+cloud-hosting experiment; cloud hosting was abandoned (RAM limits vs. real
+chapter sizes) in favor of this local desktop app.
 
 ## Tech
 
-React (frontend) + FastAPI/Python (backend). Skew detection via `deskew`,
-rendering via PyMuPDF, lossless rotation via `pypdf`.
+React (frontend) + FastAPI/Python (backend), packaged with PyInstaller and
+pywebview. Skew detection via `deskew`, rendering via PyMuPDF, lossless rotation
+via `pypdf`.

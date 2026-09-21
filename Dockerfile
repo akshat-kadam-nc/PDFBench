@@ -1,4 +1,4 @@
-# DeskewPDF - container for Render / Railway / Fly.io
+# PDF Bench - container for Render / Railway / Fly.io
 FROM python:3.11-slim
 
 WORKDIR /app

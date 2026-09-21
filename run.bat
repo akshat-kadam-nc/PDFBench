@@ -1,5 +1,5 @@
 @echo off
-REM ── DeskewPDF launcher. Double-click this file. ────────────────────────────
+REM ── PDF Bench launcher. Double-click this file. ────────────────────────────
 setlocal
 cd /d "%~dp0"
 
@@ -32,7 +32,7 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":%PORT%" ^| findstr LISTENIN
   taskkill /F /PID %%p >nul 2>&1
 )
 
-echo Starting DeskewPDF at http://127.0.0.1:%PORT%
+echo Starting PDF Bench at http://127.0.0.1:%PORT%
 start "" http://127.0.0.1:%PORT%
 "%PY%" -m uvicorn server.main:app --host 127.0.0.1 --port %PORT%
 
