@@ -15,7 +15,7 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);
     font:15px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  .wrap{max-width:780px;margin:0 auto;padding:44px 20px 90px}
+  .wrap{max-width:920px;margin:0 auto;padding:44px 20px 90px}
   h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
   .sub{color:var(--mut);margin:0 0 22px}
   .tabs{display:flex;gap:6px;margin-bottom:18px}
@@ -66,6 +66,25 @@
   ul.files li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   ul.files li button{background:#0e1219;border:1px solid var(--line);color:var(--mut);
     border-radius:6px;cursor:pointer;padding:3px 8px;font:inherit}
+  .viewer{margin-top:22px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#0e1219}
+  .viewer-bar{display:flex;align-items:center;justify-content:space-between;
+    padding:8px 12px;border-bottom:1px solid var(--line)}
+  .viewer-title{font-size:13px;color:var(--mut);font-weight:600}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{background:#0e1219;color:var(--mut);border:none;padding:5px 14px;
+    font:inherit;font-size:13px;cursor:pointer}
+  .seg button.on{background:var(--accent2);color:#fff}
+  .viewer-frame{width:100%;height:640px;border:none;display:block;background:#fff}
+  .docbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background:#0e1219;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .docinfo{display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:wrap}
+  .docname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px}
+  .steps{font-size:12px;color:#7fc0ff;background:#12233d;border:1px solid #1e3a5c;
+    border-radius:20px;padding:2px 10px}
+  .docactions{display:flex;gap:8px}
+  .btn.ghost{margin-top:0;background:#171a21;border:1px solid var(--line)}
+  .btn.ghost:hover{background:#1a2740}
+  .chk.combo{margin:16px 0 2px}
 </style>
 </head>
 <body>
@@ -119,106 +138,190 @@ function Drop({busy, label, sub, accept, multiple, onFiles}){
   );
 }
 
-function ProcessTab(){
-  const [busy,setBusy]=useState(false);
-  const [err,setErr]=useState(null);
-  const [result,setResult]=useState(null);
-  const [file,setFile]=useState(null);
-  const [deskew,setDeskew]=useState(true);
-  const [compress,setCompress]=useState(true);
-  const [dpi,setDpi]=useState("110");
-  const [qc,setQc]=useState("52");
-  const [qg,setQg]=useState("45");
-  const [colorMode,setColorMode]=useState("force_color");
-  const [mode,setMode]=useState("hybrid");
-  const [dir,setDir]=useState("odd-neg");
+// Manage an object URL for a File, revoking it when the file changes/unmounts.
+function usePdfUrl(file){
+  const [url,setUrl]=useState(null);
+  useEffect(()=>{
+    if(!file){setUrl(null);return;}
+    const u=URL.createObjectURL(file);
+    setUrl(u);
+    return ()=>URL.revokeObjectURL(u);
+  },[file]);
+  return url;
+}
 
-  const pick=useCallback((files)=>{
-    const f=files[0]; setErr(null); setResult(null);
-    if(!f) return;
-    if(!f.name.toLowerCase().endsWith(".pdf")){setFile(null);setErr("That's not a PDF.");return;}
-    setFile(f);
-  },[]);
-
-  const run=useCallback(async ()=>{
-    setErr(null); setResult(null);
-    if(!file){setErr("Choose a PDF first.");return;}
-    if(!deskew && !compress){setErr("Enable deskew and/or compress.");return;}
-    setBusy(true);
-    try{
-      const [odd,even]=dir==="odd-neg"?[-1,1]:[1,-1];
-      const fd=new FormData();
-      fd.append("file",file);
-      fd.append("deskew",deskew); fd.append("compress",compress);
-      fd.append("mode",mode); fd.append("odd_sign",odd); fd.append("even_sign",even);
-      fd.append("dpi",dpi||"110"); fd.append("quality_color",qc||"52");
-      fd.append("quality_gray",qg||"45"); fd.append("color_mode",colorMode);
-      const res=await fetch("/api/process",{method:"POST",body:fd});
-      if(!res.ok) throw await errorFromResponse(res);
-      const report=JSON.parse(res.headers.get("X-Report")||"{}");
-      const blob=await res.blob();
-      const url=URL.createObjectURL(blob);
-      const filename=(file.name.replace(/\.pdf$/i,""))+"_"+(report.steps||["out"]).join("_")+".pdf";
-      setResult({report,url,filename});
-      const a=document.createElement("a");a.href=url;a.download=filename;a.click();
-    }catch(e){setErr(describeError(e));}
-    finally{setBusy(false);}
-  },[file,deskew,compress,dpi,qc,qg,colorMode,mode,dir]);
-
+// In-app PDF preview (rendered by the WebView2/Edge PDF viewer). Shows the
+// input file, and once processing is done, toggles to the output.
+function PdfViewer({inputUrl, outputUrl}){
+  const [show,setShow]=useState("input");
+  useEffect(()=>{ if(outputUrl) setShow("output"); },[outputUrl]);
+  if(!inputUrl && !outputUrl) return null;
+  const url = show==="output" ? outputUrl : inputUrl;
   return (
-    <div className="card">
-      <Drop busy={busy} label={file?("✓ "+file.name):"Drag & drop a chapter PDF"}
-        sub={file?"click to choose a different file":"or click to choose a file"}
-        accept="application/pdf" multiple={false} onFiles={pick}/>
-      <div className="row">
-        <label className="chk"><input type="checkbox" checked={deskew} onChange={e=>setDeskew(e.target.checked)}/> Deskew</label>
-        <label className="chk"><input type="checkbox" checked={compress} onChange={e=>setCompress(e.target.checked)}/> Compress</label>
+    <div className="viewer">
+      <div className="viewer-bar">
+        <span className="viewer-title">Preview</span>
+        {inputUrl && outputUrl &&
+          <div className="seg">
+            <button className={show==="input"?"on":""} onClick={()=>setShow("input")}>Input</button>
+            <button className={show==="output"?"on":""} onClick={()=>setShow("output")}>Output</button>
+          </div>}
       </div>
-
-      <div className={"opts"+(deskew?"":" fade")}>
-        <label className="opt">Deskew mode
-          <select value={mode} onChange={e=>setMode(e.target.value)}>
-            <option value="hybrid">Hybrid</option><option value="auto">Auto</option><option value="fixed">Fixed</option>
-          </select></label>
-        <label className="opt">Direction
-          <select value={dir} onChange={e=>setDir(e.target.value)}>
-            <option value="odd-neg">Odd −, Even +</option><option value="odd-pos">Odd +, Even −</option>
-          </select></label>
-      </div>
-
-      <div className={"opts"+(compress?"":" fade")}>
-        <label className="opt">Resolution (DPI)
-          <input type="number" step="10" value={dpi} onChange={e=>setDpi(e.target.value)}/></label>
-        <label className="opt">Color quality
-          <input type="number" min="10" max="95" value={qc} onChange={e=>setQc(e.target.value)}/></label>
-        <label className="opt">Gray quality
-          <input type="number" min="10" max="95" value={qg} onChange={e=>setQg(e.target.value)}/></label>
-        <label className="opt">Color handling
-          <select value={colorMode} onChange={e=>setColorMode(e.target.value)}>
-            <option value="force_color">Always color (keeps borders/design)</option>
-            <option value="auto">Auto (text→gray, figures→color)</option>
-            <option value="force_gray">Always grayscale</option>
-          </select></label>
-      </div>
-      <div className="hint">Lossless deskew transform + adaptive image recompression. Text layer stays selectable.</div>
-      <button className="btn" onClick={run} disabled={busy||!file}>
-        {busy?"Working…":"Start"}</button>
-
-      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
-      {result && <ProcessResult r={result}/>}
+      {url
+        ? <iframe className="viewer-frame" src={url+"#toolbar=1&view=FitH"} title="PDF preview"></iframe>
+        : <div className="hint" style={{padding:16}}>Nothing to preview yet.</div>}
     </div>
   );
 }
 
-function ProcessResult({r}){
-  const rep=r.report, ds=rep.deskew, cp=rep.compress;
-  const pct=rep.in_bytes?Math.round(rep.out_bytes/rep.in_bytes*100):100;
+// Reusable control blocks so a tool can show its own options and, in combo
+// mode, another tool's options too.
+function DeskewControls({mode,setMode,dir,setDir}){
+  return (
+    <div className="opts">
+      <label className="opt">Deskew mode
+        <select value={mode} onChange={e=>setMode(e.target.value)}>
+          <option value="hybrid">Hybrid</option><option value="auto">Auto</option><option value="fixed">Fixed</option>
+        </select></label>
+      <label className="opt">Direction
+        <select value={dir} onChange={e=>setDir(e.target.value)}>
+          <option value="odd-neg">Odd −, Even +</option><option value="odd-pos">Odd +, Even −</option>
+        </select></label>
+    </div>
+  );
+}
+function CompressControls({dpi,setDpi,qc,setQc,qg,setQg,colorMode,setColorMode}){
+  return (
+    <div className="opts">
+      <label className="opt">Resolution (DPI)
+        <input type="number" step="10" value={dpi} onChange={e=>setDpi(e.target.value)}/></label>
+      <label className="opt">Color quality
+        <input type="number" min="10" max="95" value={qc} onChange={e=>setQc(e.target.value)}/></label>
+      <label className="opt">Gray quality
+        <input type="number" min="10" max="95" value={qg} onChange={e=>setQg(e.target.value)}/></label>
+      <label className="opt">Color handling
+        <select value={colorMode} onChange={e=>setColorMode(e.target.value)}>
+          <option value="force_color">Always color (keeps borders/design)</option>
+          <option value="auto">Auto (text→gray, figures→color)</option>
+          <option value="force_gray">Always grayscale</option>
+        </select></label>
+    </div>
+  );
+}
+
+// The current working document: name, applied-steps breadcrumb, download, and
+// "load new". Shown once a file is loaded, in place of the drop zone.
+function DocBar({doc, onDownload, onClear, busy}){
+  return (
+    <div className="docbar">
+      <div className="docinfo">
+        <span className="docname" title={doc.baseName+".pdf"}>📄 {doc.baseName}.pdf</span>
+        {doc.steps.length>0 && <span className="steps">{doc.steps.join(" → ")}</span>}
+      </div>
+      <div className="docactions">
+        <button className="btn ghost" onClick={onDownload} disabled={busy}>Download</button>
+        <button className="btn ghost" onClick={onClear} disabled={busy}>Load new</button>
+      </div>
+    </div>
+  );
+}
+
+// A single-file tool tab (deskew or compress) that operates on the shared
+// working document. On success the result replaces the working document, so
+// tools chain without re-uploading. A combo checkbox folds the other tool into
+// one run. New tools (encrypt, sign, …) follow the same shape.
+function ToolTab({op, doc, url, loadFile, applyResult, download, clear}){
+  const primaryDeskew = op==="deskew";
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState(null);
+  const [report,setReport]=useState(null);
+  const [also,setAlso]=useState(false);
+  const [mode,setMode]=useState("hybrid");
+  const [dir,setDir]=useState("odd-neg");
+  const [dpi,setDpi]=useState("110");
+  const [qc,setQc]=useState("52");
+  const [qg,setQg]=useState("45");
+  const [colorMode,setColorMode]=useState("force_color");
+
+  const pick=useCallback((files)=>{
+    const f=files[0]; setErr(null); setReport(null);
+    if(!f) return;
+    if(!f.name.toLowerCase().endsWith(".pdf")){setErr("That's not a PDF.");return;}
+    loadFile(f);
+  },[loadFile]);
+
+  const run=useCallback(async ()=>{
+    setErr(null); setReport(null);
+    if(!doc){setErr("Load a PDF first.");return;}
+    const doDeskew = primaryDeskew || also;
+    const doCompress = !primaryDeskew || also;
+    setBusy(true);
+    try{
+      const fd=new FormData();
+      fd.append("file",doc.file);
+      fd.append("deskew",doDeskew); fd.append("compress",doCompress);
+      if(doDeskew){
+        const [odd,even]=dir==="odd-neg"?[-1,1]:[1,-1];
+        fd.append("mode",mode); fd.append("odd_sign",odd); fd.append("even_sign",even);
+      }
+      if(doCompress){
+        fd.append("dpi",dpi||"110"); fd.append("quality_color",qc||"52");
+        fd.append("quality_gray",qg||"45"); fd.append("color_mode",colorMode);
+      }
+      const res=await fetch("/api/process",{method:"POST",body:fd});
+      if(!res.ok) throw await errorFromResponse(res);
+      const rep=JSON.parse(res.headers.get("X-Report")||"{}");
+      const blob=await res.blob();
+      applyResult(blob, rep.steps||[]);
+      setReport(rep);
+    }catch(e){setErr(describeError(e));}
+    finally{setBusy(false);}
+  },[doc,primaryDeskew,also,mode,dir,dpi,qc,qg,colorMode,applyResult]);
+
+  const runLabel = busy ? "Working…"
+    : primaryDeskew ? (also ? "Deskew + Compress" : "Deskew")
+    : (also ? "Compress + Deskew" : "Compress");
+
+  const deskewCtl = <DeskewControls mode={mode} setMode={setMode} dir={dir} setDir={setDir}/>;
+  const compressCtl = <CompressControls dpi={dpi} setDpi={setDpi} qc={qc} setQc={setQc}
+    qg={qg} setQg={setQg} colorMode={colorMode} setColorMode={setColorMode}/>;
+
+  return (
+    <div className="card">
+      {!doc
+        ? <Drop busy={busy}
+            label={primaryDeskew?"Drag & drop a PDF to deskew":"Drag & drop a PDF to compress"}
+            sub="or click to choose a file" accept="application/pdf" multiple={false} onFiles={pick}/>
+        : <DocBar doc={doc} onDownload={download} onClear={clear} busy={busy}/>}
+
+      {doc && <>
+        {primaryDeskew ? deskewCtl : compressCtl}
+
+        <label className="chk combo">
+          <input type="checkbox" checked={also} onChange={e=>setAlso(e.target.checked)}/>
+          Also {primaryDeskew?"compress":"deskew"} in the same run</label>
+        {also && (primaryDeskew ? compressCtl : deskewCtl)}
+
+        <div className="hint">Runs on the current working file and replaces it with the result, so you can keep applying tools (or switch tabs) without re-uploading.</div>
+        <button className="btn" onClick={run} disabled={busy}>{runLabel}</button>
+
+        {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+        {report && <ProcessResult report={report}/>}
+        <PdfViewer inputUrl={url} outputUrl={null}/>
+      </>}
+    </div>
+  );
+}
+
+function ProcessResult({report}){
+  const ds=report.deskew, cp=report.compress;
+  const pct=report.in_bytes?Math.round(report.out_bytes/report.in_bytes*100):100;
   return (
     <div className="result">
       <div className="banner">
-        <span className="big">✓ {MB(rep.in_bytes)} → {MB(rep.out_bytes)} ({pct}%)</span>
-        &nbsp;· saved <code>{r.filename}</code>
+        <span className="big">✓ {MB(report.in_bytes)} → {MB(report.out_bytes)} ({pct}%)</span>
         {cp && <>&nbsp;· {cp.color_pages} color / {cp.gray_pages} gray pages</>}
+        <span style={{marginLeft:"auto",color:"var(--mut)"}}>applied: {(report.steps||[]).join(" + ")}</span>
       </div>
       {(ds||cp) &&
         <table>
@@ -236,12 +339,11 @@ function ProcessResult({r}){
             })}
           </tbody>
         </table>}
-      <a className="btn" href={r.url} download={r.filename}>Download again</a>
     </div>
   );
 }
 
-function MergeTab(){
+function MergeTab({onResult}){
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState(null);
   const [items,setItems]=useState([]); // {file}
@@ -274,10 +376,10 @@ function MergeTab(){
       const blob=await res.blob();const url=URL.createObjectURL(blob);
       const filename=(name||"book")+".pdf";
       setResult({report,url,filename});
-      const a=document.createElement("a");a.href=url;a.download=filename;a.click();
+      onResult(blob, (name||"book"), ["merged"]);   // becomes the working doc
     }catch(e){setErr(describeError(e));}
     finally{setBusy(false);}
-  },[items,name]);
+  },[items,name,onResult]);
 
   const totalIn=items.reduce((s,it)=>s+it.file.size,0);
   return (
@@ -304,7 +406,7 @@ function MergeTab(){
         </div>}
       <button className="btn" onClick={doMerge} disabled={busy||items.length<2}>
         {busy?"Merging…":"Merge into one PDF"}</button>
-      <div className="hint">Merging is lossless — deskew/compress your chapters first, then combine them here.</div>
+      <div className="hint">Merging is lossless. The merged file becomes your working document — switch to Deskew or Compress to keep editing it without re-uploading.</div>
       {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
       {result &&
         <div className="result"><div className="banner">
@@ -315,6 +417,7 @@ function MergeTab(){
             : <span className="tag fb" style={{marginLeft:8}}>over 10 MB</span>}
           <a className="btn" href={result.url} download={result.filename} style={{marginLeft:"auto"}}>Download again</a>
         </div></div>}
+      <PdfViewer inputUrl={null} outputUrl={result&&result.url}/>
     </div>
   );
 }
@@ -387,17 +490,53 @@ function HistoryTab(){
 }
 
 function App(){
-  const [tab,setTab]=useState("process");
+  const [tab,setTab]=useState("deskew");
+  const [doc,setDoc]=useState(null); // {file, baseName, steps:[]}
+  const url=usePdfUrl(doc&&doc.file);
+
+  const loadFile=useCallback((f)=>{
+    setDoc({file:f, baseName:f.name.replace(/\.pdf$/i,""), steps:[]});
+  },[]);
+  // Result of a tool applied to the current doc -> becomes the new doc.
+  const applyResult=useCallback((blob,addedSteps)=>{
+    setDoc(prev=>{
+      const base=prev?prev.baseName:"output";
+      const steps=[...(prev?prev.steps:[]),...addedSteps];
+      return {file:new File([blob],base+"_"+steps.join("_")+".pdf",{type:"application/pdf"}),
+              baseName:base, steps};
+    });
+  },[]);
+  // A producer (merge) sets a fresh working doc.
+  const setResultDoc=useCallback((blob,baseName,steps)=>{
+    const name=baseName+(steps.length?"_"+steps.join("_"):"")+".pdf";
+    setDoc({file:new File([blob],name,{type:"application/pdf"}), baseName, steps});
+  },[]);
+  const download=useCallback(()=>{
+    if(!doc)return;
+    const name=doc.baseName+(doc.steps.length?"_"+doc.steps.join("_"):"")+".pdf";
+    const u=URL.createObjectURL(doc.file);
+    const a=document.createElement("a");a.href=u;a.download=name;a.click();
+    setTimeout(()=>URL.revokeObjectURL(u),15000);
+  },[doc]);
+
+  const Tab=({id,label})=>
+    <div className={"tab"+(tab===id?" on":"")} onClick={()=>setTab(id)}>{label}</div>;
+
   return (
     <div className="wrap">
       <h1>PDF Bench</h1>
       <p className="sub">A local toolbox to deskew, compress and merge your PDFs.</p>
       <div className="tabs">
-        <div className={"tab"+(tab==="process"?" on":"")} onClick={()=>setTab("process")}>Deskew &amp; Compress</div>
-        <div className={"tab"+(tab==="merge"?" on":"")} onClick={()=>setTab("merge")}>Merge</div>
-        <div className={"tab"+(tab==="history"?" on":"")} onClick={()=>setTab("history")}>History</div>
+        <Tab id="deskew" label="Deskew"/>
+        <Tab id="compress" label="Compress"/>
+        <Tab id="merge" label="Merge"/>
+        <Tab id="history" label="History"/>
       </div>
-      {tab==="process"?<ProcessTab/>:tab==="merge"?<MergeTab/>:<HistoryTab/>}
+      {(tab==="deskew"||tab==="compress") &&
+        <ToolTab key={tab} op={tab} doc={doc} url={url}
+          loadFile={loadFile} applyResult={applyResult} download={download} clear={()=>setDoc(null)}/>}
+      {tab==="merge" && <MergeTab onResult={setResultDoc}/>}
+      {tab==="history" && <HistoryTab/>}
     </div>
   );
 }
