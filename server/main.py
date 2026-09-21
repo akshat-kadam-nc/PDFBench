@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from .deskew_core import Options as DeskewOptions, deskew_pdf_bytes
 from .compress_core import CompressOptions, compress_pdf_bytes
 from .merge_core import merge_pdfs
+from . import history
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -147,7 +148,12 @@ async def process(
              f", peak RSS {peak:.0f}MB" if peak else "")
 
     stem = os.path.splitext(os.path.basename(file.filename))[0]
-    return _pdf_response(data, f"{stem}_{'_'.join(report['steps'])}.pdf", report)
+    out_name = f"{stem}_{'_'.join(report['steps'])}.pdf"
+    pages = ((report.get("deskew") or report.get("compress") or {}).get("page_count"))
+    history.record({"op": "process", "name": out_name, "inputs": [file.filename],
+                    "steps": report["steps"], "pages": pages,
+                    "in_bytes": in_bytes, "out_bytes": len(data)})
+    return _pdf_response(data, out_name, report)
 
 
 @app.post("/api/merge")
@@ -173,12 +179,28 @@ async def merge(files: list[UploadFile] = File(...), name: str = Form("book")):
         raise HTTPException(500, f"{type(e).__name__}: {e}")
     log.info("merge done: %d pages, %.1fMB", report["total_pages"], report["out_bytes"] / 1e6)
     safe = "".join(c for c in name if c.isalnum() or c in " _-").strip() or "book"
-    return _pdf_response(out, f"{safe}.pdf", report)
+    out_name = f"{safe}.pdf"
+    history.record({"op": "merge", "name": out_name,
+                    "inputs": [n for n, _ in parts], "pages": report.get("total_pages"),
+                    "in_bytes": sum(len(d) for _, d in parts), "out_bytes": report["out_bytes"]})
+    return _pdf_response(out, out_name, report)
 
 
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok", "max_upload_mb": MAX_UPLOAD_MB}
+
+
+@app.get("/api/history")
+async def get_history(limit: int = 500):
+    return {"items": history.read(limit=limit), "stats": history.stats(),
+            "dir": history.data_dir()}
+
+
+@app.delete("/api/history")
+async def clear_history():
+    history.clear()
+    return {"ok": True}
 
 
 # ── static frontend ────────────────────────────────────────────────────────

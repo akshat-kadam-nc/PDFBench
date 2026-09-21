@@ -11,14 +11,17 @@ if not exist "%PY%" (
 
 "%PY%" -m pip install --quiet --disable-pip-version-check pyinstaller
 
-"%PY%" -m PyInstaller --onefile --name DeskewPDF ^
+"%PY%" -m PyInstaller --onefile --windowed --name DeskewPDF ^
+  --icon "assets\DeskewPDF.ico" ^
   --add-data "web;web" ^
   --collect-all skimage ^
   --collect-all scipy ^
   --collect-all pymupdf ^
   --collect-all deskew ^
+  --collect-all webview ^
   --collect-submodules uvicorn ^
   --collect-submodules fastapi ^
+  --hidden-import clr ^
   --noconfirm --clean desktop.py
 
 echo.

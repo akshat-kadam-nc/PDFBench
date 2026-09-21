@@ -51,8 +51,9 @@
   .tag.fb{background:#2a230f;color:var(--warn)}
   .tag.color{background:#182a3a;color:#7fc0ff}
   .tag.gray{background:#22262e;color:#b9c0cc}
-  .btn{margin-top:16px;background:var(--accent2);color:#fff;border:none;border-radius:9px;
-    padding:11px 18px;font:inherit;font-weight:600;cursor:pointer}
+  .btn{display:inline-block;margin-top:16px;background:var(--accent2);color:#fff;border:none;
+    border-radius:9px;padding:11px 18px;font:inherit;font-weight:600;cursor:pointer;
+    text-decoration:none;line-height:1.2;white-space:nowrap;vertical-align:middle}
   .btn:hover{background:var(--accent)}
   .btn:disabled{background:#2a2f3a;cursor:not-allowed}
   .spin{width:16px;height:16px;border:2px solid #ffffff40;border-top-color:#fff;border-radius:50%;
@@ -70,8 +71,9 @@
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState, useCallback, useRef} = React;
+const {useState, useCallback, useRef, useEffect} = React;
 const MB = b => (b/1e6).toFixed(2)+" MB";
+const fmtDate = iso => { try{ return new Date(iso).toLocaleString(); }catch(_){ return iso; } };
 
 // Pull a useful message out of a failed response (handles empty statusText on
 // HTTP/2, non-JSON error bodies from the proxy, and OOM/timeout cases).
@@ -121,6 +123,7 @@ function ProcessTab(){
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState(null);
   const [result,setResult]=useState(null);
+  const [file,setFile]=useState(null);
   const [deskew,setDeskew]=useState(true);
   const [compress,setCompress]=useState(true);
   const [dpi,setDpi]=useState("110");
@@ -130,10 +133,16 @@ function ProcessTab(){
   const [mode,setMode]=useState("hybrid");
   const [dir,setDir]=useState("odd-neg");
 
-  const run=useCallback(async (files)=>{
-    const file=files[0]; setErr(null); setResult(null);
-    if(!file) return;
-    if(!file.name.toLowerCase().endsWith(".pdf")){setErr("That's not a PDF.");return;}
+  const pick=useCallback((files)=>{
+    const f=files[0]; setErr(null); setResult(null);
+    if(!f) return;
+    if(!f.name.toLowerCase().endsWith(".pdf")){setFile(null);setErr("That's not a PDF.");return;}
+    setFile(f);
+  },[]);
+
+  const run=useCallback(async ()=>{
+    setErr(null); setResult(null);
+    if(!file){setErr("Choose a PDF first.");return;}
     if(!deskew && !compress){setErr("Enable deskew and/or compress.");return;}
     setBusy(true);
     try{
@@ -154,12 +163,13 @@ function ProcessTab(){
       const a=document.createElement("a");a.href=url;a.download=filename;a.click();
     }catch(e){setErr(describeError(e));}
     finally{setBusy(false);}
-  },[deskew,compress,dpi,qc,qg,colorMode,mode,dir]);
+  },[file,deskew,compress,dpi,qc,qg,colorMode,mode,dir]);
 
   return (
     <div className="card">
-      <Drop busy={busy} label="Drag & drop a chapter PDF" sub="or click to choose a file"
-        accept="application/pdf" multiple={false} onFiles={run}/>
+      <Drop busy={busy} label={file?("✓ "+file.name):"Drag & drop a chapter PDF"}
+        sub={file?"click to choose a different file":"or click to choose a file"}
+        accept="application/pdf" multiple={false} onFiles={pick}/>
       <div className="row">
         <label className="chk"><input type="checkbox" checked={deskew} onChange={e=>setDeskew(e.target.checked)}/> Deskew</label>
         <label className="chk"><input type="checkbox" checked={compress} onChange={e=>setCompress(e.target.checked)}/> Compress</label>
@@ -191,6 +201,8 @@ function ProcessTab(){
           </select></label>
       </div>
       <div className="hint">Lossless deskew transform + adaptive image recompression. Text layer stays selectable.</div>
+      <button className="btn" onClick={run} disabled={busy||!file}>
+        {busy?"Working…":"Start"}</button>
 
       {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
       {result && <ProcessResult r={result}/>}
@@ -307,6 +319,73 @@ function MergeTab(){
   );
 }
 
+function HistoryTab(){
+  const [data,setData]=useState(null);
+  const [err,setErr]=useState(null);
+  const [loading,setLoading]=useState(true);
+
+  const load=useCallback(async()=>{
+    setLoading(true);setErr(null);
+    try{
+      const res=await fetch("/api/history?limit=500");
+      if(!res.ok) throw await errorFromResponse(res);
+      setData(await res.json());
+    }catch(e){setErr(describeError(e));}
+    finally{setLoading(false);}
+  },[]);
+  useEffect(()=>{load();},[load]);
+
+  const clear=useCallback(async()=>{
+    if(!confirm("Clear the entire usage log? This cannot be undone.")) return;
+    try{ await fetch("/api/history",{method:"DELETE"}); load(); }
+    catch(e){setErr(describeError(e));}
+  },[load]);
+
+  const s=data&&data.stats;
+  return (
+    <div className="card">
+      <div className="row" style={{marginTop:0,justifyContent:"space-between"}}>
+        <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+          <div className="opt">Files processed<span style={{color:"var(--fg)",fontWeight:700,fontSize:18}}>{s?s.count:"—"}</span></div>
+          <div className="opt">Input total<span style={{color:"var(--fg)",fontWeight:700,fontSize:18}}>{s?MB(s.in_bytes):"—"}</span></div>
+          <div className="opt">Output total<span style={{color:"var(--fg)",fontWeight:700,fontSize:18}}>{s?MB(s.out_bytes):"—"}</span></div>
+          <div className="opt">Space saved<span style={{color:"var(--ok)",fontWeight:700,fontSize:18}}>{s?MB(s.saved_bytes):"—"}</span></div>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+          <button className="btn" style={{marginTop:0,background:"#0e1219",border:"1px solid var(--line)"}} onClick={load}>Refresh</button>
+          <button className="btn" style={{marginTop:0,background:"#2a1417",border:"1px solid #5c2126"}} onClick={clear} disabled={!s||!s.count}>Clear log</button>
+        </div>
+      </div>
+
+      {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
+      {loading && !data && <div className="hint">Loading…</div>}
+      {data && data.items.length===0 && !loading &&
+        <div className="hint" style={{marginTop:20}}>No files processed yet. Deskew, compress or merge a PDF and it will show up here.</div>}
+
+      {data && data.items.length>0 &&
+        <table>
+          <thead><tr><th>When</th><th>Type</th><th>File</th><th className="num">Pages</th><th className="num">Size</th><th className="num">Saved</th></tr></thead>
+          <tbody>
+            {data.items.map(it=>{
+              const pct=it.in_bytes?Math.round(it.out_bytes/it.in_bytes*100):100;
+              const saved=(it.in_bytes||0)-(it.out_bytes||0);
+              const label=it.op==="merge"?("merge ("+(it.inputs?it.inputs.length:0)+")"):(it.steps?it.steps.join("+"):"process");
+              return <tr key={it.id}>
+                <td style={{whiteSpace:"nowrap",color:"var(--mut)"}}>{fmtDate(it.at)}</td>
+                <td><span className={"tag"+(it.op==="merge"?" color":"")}>{label}</span></td>
+                <td style={{maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={(it.inputs||[]).join(", ")}>{it.name}</td>
+                <td className="num">{it.pages??"—"}</td>
+                <td className="num">{MB(it.in_bytes||0)} → {MB(it.out_bytes||0)} <span style={{color:"var(--mut)"}}>({pct}%)</span></td>
+                <td className="num" style={{color:saved>0?"var(--ok)":"var(--mut)"}}>{saved>0?MB(saved):"—"}</td>
+              </tr>;
+            })}
+          </tbody>
+        </table>}
+      {data && <div className="hint" style={{marginTop:14}}>Stored locally at <code>{data.dir}</code> · newest first, up to 500 shown.</div>}
+    </div>
+  );
+}
+
 function App(){
   const [tab,setTab]=useState("process");
   return (
@@ -316,8 +395,9 @@ function App(){
       <div className="tabs">
         <div className={"tab"+(tab==="process"?" on":"")} onClick={()=>setTab("process")}>Deskew &amp; Compress</div>
         <div className={"tab"+(tab==="merge"?" on":"")} onClick={()=>setTab("merge")}>Merge</div>
+        <div className={"tab"+(tab==="history"?" on":"")} onClick={()=>setTab("history")}>History</div>
       </div>
-      {tab==="process"?<ProcessTab/>:<MergeTab/>}
+      {tab==="process"?<ProcessTab/>:tab==="merge"?<MergeTab/>:<HistoryTab/>}
     </div>
   );
 }
