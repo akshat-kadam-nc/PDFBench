@@ -29,6 +29,11 @@
   .tab{padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line);
     background:var(--card);color:var(--mut);font-weight:600;font-size:14px}
   .tab.on{color:#fff;border-color:var(--accent2);background:#1a2740}
+  .tab.op{display:flex;align-items:center;gap:8px}
+  .tab.op input{width:15px;height:15px;margin:0;accent-color:var(--accent2);cursor:pointer}
+  .tab.op.sel{border-color:var(--accent2);color:#dce8ff}
+  .ctl-title{font-size:11px;color:var(--mut);font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;margin:2px 0 -4px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
   .drop{border:2px dashed var(--line);border-radius:12px;padding:42px 20px;text-align:center;
     cursor:pointer;transition:.15s;background:var(--drop)}
@@ -220,84 +225,47 @@ function DocBar({doc, onDownload, onClear, busy}){
   );
 }
 
-// A single-file tool tab (deskew or compress) that operates on the shared
-// working document. On success the result replaces the working document, so
-// tools chain without re-uploading. A combo checkbox folds the other tool into
-// one run. New tools (encrypt, sign, …) follow the same shape.
-function ToolTab({op, doc, loadFile, applyResult, download, clear}){
-  const primaryDeskew = op==="deskew";
-  const [busy,setBusy]=useState(false);
-  const [err,setErr]=useState(null);
-  const [report,setReport]=useState(null);
-  const [also,setAlso]=useState(false);
-  const [mode,setMode]=useState("hybrid");
-  const [dir,setDir]=useState("odd-neg");
-  const [dpi,setDpi]=useState("110");
-  const [qc,setQc]=useState("52");
-  const [qg,setQg]=useState("45");
-  const [colorMode,setColorMode]=useState("force_color");
+// A pipeline-operation tab: a checkbox (include in the run) + label (view its
+// options). The checkbox is the single source of truth for what runs, so the
+// tab bar is a one-glance view of the selected pipeline. New single-file tools
+// (encrypt, sign, …) are added as more OpTabs.
+function OpTab({id,label,active,checked,onView,onToggle}){
+  return (
+    <div className={"tab op"+(active?" on":"")+(checked?" sel":"")} onClick={()=>onView(id)}>
+      <input type="checkbox" checked={checked}
+        onClick={e=>e.stopPropagation()} onChange={()=>onToggle(id)}/>
+      <span>{label}</span>
+    </div>
+  );
+}
+// A plain navigation tab (Merge, History) — not part of the single-file pipeline.
+function NavTab({id,label,active,onView}){
+  return <div className={"tab"+(active?" on":"")} onClick={()=>onView(id)}>{label}</div>;
+}
 
-  const pick=useCallback((files)=>{
-    const f=files[0]; setErr(null); setReport(null);
-    if(!f) return;
-    if(!f.name.toLowerCase().endsWith(".pdf")){setErr("That's not a PDF.");return;}
-    loadFile(f);
-  },[loadFile]);
-
-  const run=useCallback(async ()=>{
-    setErr(null); setReport(null);
-    if(!doc){setErr("Load a PDF first.");return;}
-    const doDeskew = primaryDeskew || also;
-    const doCompress = !primaryDeskew || also;
-    setBusy(true);
-    try{
-      const fd=new FormData();
-      fd.append("file",doc.file);
-      fd.append("deskew",doDeskew); fd.append("compress",doCompress);
-      if(doDeskew){
-        const [odd,even]=dir==="odd-neg"?[-1,1]:[1,-1];
-        fd.append("mode",mode); fd.append("odd_sign",odd); fd.append("even_sign",even);
-      }
-      if(doCompress){
-        fd.append("dpi",dpi||"110"); fd.append("quality_color",qc||"52");
-        fd.append("quality_gray",qg||"45"); fd.append("color_mode",colorMode);
-      }
-      const res=await fetch("/api/process",{method:"POST",body:fd});
-      if(!res.ok) throw await errorFromResponse(res);
-      const rep=JSON.parse(res.headers.get("X-Report")||"{}");
-      const blob=await res.blob();
-      applyResult(blob, rep.steps||[]);
-      setReport(rep);
-    }catch(e){setErr(describeError(e));}
-    finally{setBusy(false);}
-  },[doc,primaryDeskew,also,mode,dir,dpi,qc,qg,colorMode,applyResult]);
-
-  const runLabel = busy ? "Working…"
-    : primaryDeskew ? (also ? "Deskew + Compress" : "Deskew")
-    : (also ? "Compress + Deskew" : "Compress");
-
-  const deskewCtl = <DeskewControls mode={mode} setMode={setMode} dir={dir} setDir={setDir}/>;
-  const compressCtl = <CompressControls dpi={dpi} setDpi={setDpi} qc={qc} setQc={setQc}
-    qg={qg} setQg={setQg} colorMode={colorMode} setColorMode={setColorMode}/>;
-
+// The single-file workspace: shows the viewed operation's controls and one Run
+// button that applies every selected operation (ticked in the tab bar), in
+// order, to the working document.
+function OpPane({view, ops, doc, busy, err, report, onPick, onRun, download, clear,
+                 mode,setMode,dir,setDir, dpi,setDpi,qc,setQc,qg,setQg,colorMode,setColorMode}){
+  const selected=[]; if(ops.deskew)selected.push("Deskew"); if(ops.compress)selected.push("Compress");
+  const runLabel = busy ? "Working…" : selected.length ? ("Run "+selected.join(" + ")) : "Run";
   return (
     <div className="card">
       {!doc
-        ? <Drop busy={busy}
-            label={primaryDeskew?"Drag & drop a PDF to deskew":"Drag & drop a PDF to compress"}
-            sub="or click to choose a file" accept="application/pdf" multiple={false} onFiles={pick}/>
+        ? <Drop busy={busy} label="Drag & drop a PDF" sub="or click to choose a file"
+            accept="application/pdf" multiple={false} onFiles={onPick}/>
         : <DocBar doc={doc} onDownload={download} onClear={clear} busy={busy}/>}
 
       {doc && <>
-        {primaryDeskew ? deskewCtl : compressCtl}
+        <div className="ctl-title">{view==="deskew"?"Deskew options":"Compress options"}</div>
+        {view==="deskew"
+          ? <DeskewControls mode={mode} setMode={setMode} dir={dir} setDir={setDir}/>
+          : <CompressControls dpi={dpi} setDpi={setDpi} qc={qc} setQc={setQc}
+              qg={qg} setQg={setQg} colorMode={colorMode} setColorMode={setColorMode}/>}
 
-        <label className="chk combo">
-          <input type="checkbox" checked={also} onChange={e=>setAlso(e.target.checked)}/>
-          Also {primaryDeskew?"compress":"deskew"} in the same run</label>
-        {also && (primaryDeskew ? compressCtl : deskewCtl)}
-
-        <div className="hint">Runs on the current working file and replaces it with the result, so you can keep applying tools (or switch tabs) without re-uploading.</div>
-        <button className="btn" onClick={run} disabled={busy}>{runLabel}</button>
+        <div className="hint">Tick the tabs above for every operation you want, then Run — they apply in order to the working file and replace it, with no re-upload.</div>
+        <button className="btn" onClick={onRun} disabled={busy||!doc||selected.length===0}>{runLabel}</button>
 
         {err && <div className="result"><div className="banner err">⚠ {err}</div></div>}
         {report && <ProcessResult report={report}/>}
@@ -482,14 +450,25 @@ function HistoryTab(){
 }
 
 function App(){
-  const [tab,setTab]=useState("deskew");
-  const [doc,setDoc]=useState(null); // {file, baseName, steps:[]}
+  const [tab,setTab]=useState("deskew");            // which panel is viewed
+  const [ops,setOps]=useState({deskew:true,compress:false}); // pipeline selection
+  const [doc,setDoc]=useState(null);                // {file, baseName, steps:[]}
   const url=usePdfUrl(doc&&doc.file);
+  // per-operation options (persist across tab views)
+  const [mode,setMode]=useState("hybrid");
+  const [dir,setDir]=useState("odd-neg");
+  const [dpi,setDpi]=useState("110");
+  const [qc,setQc]=useState("52");
+  const [qg,setQg]=useState("45");
+  const [colorMode,setColorMode]=useState("force_color");
+  // run state
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState(null);
+  const [report,setReport]=useState(null);
 
   const loadFile=useCallback((f)=>{
     setDoc({file:f, baseName:f.name.replace(/\.pdf$/i,""), steps:[]});
   },[]);
-  // Result of a tool applied to the current doc -> becomes the new doc.
   const applyResult=useCallback((blob,addedSteps)=>{
     setDoc(prev=>{
       const base=prev?prev.baseName:"output";
@@ -498,7 +477,6 @@ function App(){
               baseName:base, steps};
     });
   },[]);
-  // A producer (merge) sets a fresh working doc.
   const setResultDoc=useCallback((blob,baseName,steps)=>{
     const name=baseName+(steps.length?"_"+steps.join("_"):"")+".pdf";
     setDoc({file:new File([blob],name,{type:"application/pdf"}), baseName, steps});
@@ -511,26 +489,62 @@ function App(){
     setTimeout(()=>URL.revokeObjectURL(u),15000);
   },[doc]);
 
-  const Tab=({id,label})=>
-    <div className={"tab"+(tab===id?" on":"")} onClick={()=>setTab(id)}>{label}</div>;
+  const pick=useCallback((files)=>{
+    const f=files[0]; setErr(null); setReport(null);
+    if(!f) return;
+    if(!f.name.toLowerCase().endsWith(".pdf")){setErr("That's not a PDF.");return;}
+    loadFile(f);
+  },[loadFile]);
+  const toggleOp=useCallback((id)=>setOps(o=>({...o,[id]:!o[id]})),[]);
+
+  // Run every selected operation, in pipeline order, in one /api/process call.
+  const run=useCallback(async ()=>{
+    setErr(null); setReport(null);
+    if(!doc){setErr("Load a PDF first.");return;}
+    if(!ops.deskew && !ops.compress){setErr("Tick at least one operation in the tab bar.");return;}
+    setBusy(true);
+    try{
+      const fd=new FormData();
+      fd.append("file",doc.file);
+      fd.append("deskew",ops.deskew); fd.append("compress",ops.compress);
+      if(ops.deskew){
+        const [odd,even]=dir==="odd-neg"?[-1,1]:[1,-1];
+        fd.append("mode",mode); fd.append("odd_sign",odd); fd.append("even_sign",even);
+      }
+      if(ops.compress){
+        fd.append("dpi",dpi||"110"); fd.append("quality_color",qc||"52");
+        fd.append("quality_gray",qg||"45"); fd.append("color_mode",colorMode);
+      }
+      const res=await fetch("/api/process",{method:"POST",body:fd});
+      if(!res.ok) throw await errorFromResponse(res);
+      const rep=JSON.parse(res.headers.get("X-Report")||"{}");
+      const blob=await res.blob();
+      applyResult(blob, rep.steps||[]);
+      setReport(rep);
+    }catch(e){setErr(describeError(e));}
+    finally{setBusy(false);}
+  },[doc,ops,mode,dir,dpi,qc,qg,colorMode,applyResult]);
 
   return (
     <div className="wrap">
       <h1>PDF Bench</h1>
       <p className="sub">A local toolbox to deskew, compress and merge your PDFs.</p>
       <div className="tabs">
-        <Tab id="deskew" label="Deskew"/>
-        <Tab id="compress" label="Compress"/>
-        <Tab id="merge" label="Merge"/>
-        <Tab id="history" label="History"/>
+        <OpTab id="deskew" label="Deskew" active={tab==="deskew"} checked={ops.deskew} onView={setTab} onToggle={toggleOp}/>
+        <OpTab id="compress" label="Compress" active={tab==="compress"} checked={ops.compress} onView={setTab} onToggle={toggleOp}/>
+        <NavTab id="merge" label="Merge" active={tab==="merge"} onView={setTab}/>
+        <NavTab id="history" label="History" active={tab==="history"} onView={setTab}/>
       </div>
       {tab==="history"
         ? <HistoryTab/>
         : <div className="workspace">
             <div className="workmain">
               {(tab==="deskew"||tab==="compress")
-                ? <ToolTab key={tab} op={tab} doc={doc}
-                    loadFile={loadFile} applyResult={applyResult} download={download} clear={()=>setDoc(null)}/>
+                ? <OpPane view={tab} ops={ops} doc={doc} busy={busy} err={err} report={report}
+                    onPick={pick} onRun={run} download={download} clear={()=>{setDoc(null);setReport(null);}}
+                    mode={mode} setMode={setMode} dir={dir} setDir={setDir}
+                    dpi={dpi} setDpi={setDpi} qc={qc} setQc={setQc} qg={qg} setQg={setQg}
+                    colorMode={colorMode} setColorMode={setColorMode}/>
                 : <MergeTab onResult={setResultDoc}/>}
             </div>
             <div className="workaside"><PdfViewer url={url}/></div>
