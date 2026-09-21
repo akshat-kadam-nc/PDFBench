@@ -11,6 +11,31 @@
   :root{
     --bg:#0f1115; --card:#171a21; --line:#2a2f3a; --fg:#e7e9ee; --mut:#9aa3b2;
     --accent:#5b9dff; --accent2:#3b7de0; --ok:#3fb950; --warn:#d29922; --drop:#1d2330;
+    --input:#0e1219; --panel:#0e1219; --chip:#1c2431; --disabled:#2a2f3a;
+    --tab-on:#1a2740; --tab-on-fg:#ffffff;
+    --steps-bg:#12233d; --steps-line:#1e3a5c; --steps-fg:#7fc0ff;
+    --ok-bg:#12261a; --ok-line:#1e3a26; --ok-fg:#c6f0d0;
+    --err-bg:#2a1417; --err-line:#5c2126; --err-fg:#f3c2c6;
+  }
+  :root[data-theme="light"], :root.light{
+    --bg:#f3f5f9; --card:#ffffff; --line:#e3e7ee; --fg:#1b1f27; --mut:#5c6675;
+    --accent:#2f6fe0; --accent2:#2f6fe0; --ok:#1a7f37; --warn:#9a6700; --drop:#eef2f8;
+    --input:#f6f8fc; --panel:#f7f9fc; --chip:#eef1f6; --disabled:#dfe3ea;
+    --tab-on:#e6efff; --tab-on-fg:#1f5fd0;
+    --steps-bg:#e6efff; --steps-line:#c5d8f7; --steps-fg:#1f5fd0;
+    --ok-bg:#e8f6ec; --ok-line:#bfe4c8; --ok-fg:#1a7f37;
+    --err-bg:#fdecec; --err-line:#f3c2c6; --err-fg:#b42332;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]):not(.dark){
+      --bg:#f3f5f9; --card:#ffffff; --line:#e3e7ee; --fg:#1b1f27; --mut:#5c6675;
+      --accent:#2f6fe0; --accent2:#2f6fe0; --ok:#1a7f37; --warn:#9a6700; --drop:#eef2f8;
+      --input:#f6f8fc; --panel:#f7f9fc; --chip:#eef1f6; --disabled:#dfe3ea;
+      --tab-on:#e6efff; --tab-on-fg:#1f5fd0;
+      --steps-bg:#e6efff; --steps-line:#c5d8f7; --steps-fg:#1f5fd0;
+      --ok-bg:#e8f6ec; --ok-line:#bfe4c8; --ok-fg:#1a7f37;
+      --err-bg:#fdecec; --err-line:#f3c2c6; --err-fg:#b42332;
+    }
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--fg);
@@ -23,21 +48,31 @@
     .workspace{flex-direction:column}
     .workaside{position:static;width:100%;flex-basis:auto}
   }
-  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.02em}
-  .sub{color:var(--mut);margin:0 0 22px}
-  .tabs{display:flex;gap:6px;margin-bottom:18px}
-  .tab{padding:9px 16px;border-radius:9px;cursor:pointer;border:1px solid var(--line);
-    background:var(--card);color:var(--mut);font-weight:600;font-size:14px}
-  .tab.on{color:#fff;border-color:var(--accent2);background:#1a2740}
-  .tab.op{display:flex;align-items:center;gap:8px}
+  h1{font-size:26px;margin:0;letter-spacing:-.02em}
+  .sub{color:var(--mut);margin:2px 0 0}
+  .head{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+  .brand{display:flex;align-items:center;gap:14px;min-width:0}
+  .logo{width:44px;height:44px;flex:none;border-radius:11px;display:block}
+  .iconbtn{background:var(--card);border:1px solid var(--line);color:var(--fg);border-radius:10px;
+    width:40px;height:40px;flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .iconbtn:hover{background:var(--tab-on);color:var(--tab-on-fg);border-color:var(--accent2)}
+  .tabs{display:flex;align-items:center;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+  .tab{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:9px;
+    cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--mut);
+    font-weight:600;font-size:14px}
+  .tab.on{color:var(--tab-on-fg);border-color:var(--accent2);background:var(--tab-on)}
   .tab.op input{width:15px;height:15px;margin:0;accent-color:var(--accent2);cursor:pointer}
-  .tab.op.sel{border-color:var(--accent2);color:#dce8ff}
+  .tab.op.sel{border-color:var(--accent2)}
+  .tabspacer{flex:1 1 auto}
+  .tab.log{background:transparent;border-color:transparent;color:var(--mut)}
+  .tab.log:hover{color:var(--fg)}
+  .tab.log.on{background:var(--card);border-color:var(--line);color:var(--fg)}
   .ctl-title{font-size:11px;color:var(--mut);font-weight:700;letter-spacing:.05em;
     text-transform:uppercase;margin:2px 0 -4px}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
   .drop{border:2px dashed var(--line);border-radius:12px;padding:42px 20px;text-align:center;
     cursor:pointer;transition:.15s;background:var(--drop)}
-  .drop.hover{border-color:var(--accent);background:#1a2740}
+  .drop.hover{border-color:var(--accent);background:var(--tab-on)}
   .drop.busy{opacity:.7;cursor:progress}
   .drop h2{margin:0 0 6px;font-size:18px;font-weight:600}
   .drop p{margin:0;color:var(--mut);font-size:14px}
@@ -46,20 +81,20 @@
   .chk input{width:17px;height:17px;accent-color:var(--accent2)}
   .opts{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0 2px}
   .opt{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--mut)}
-  select,input[type=number],input[type=text]{background:#0e1219;color:var(--fg);
+  select,input[type=number],input[type=text]{background:var(--input);color:var(--fg);
     border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;min-width:120px}
   .hint{font-size:12px;color:var(--mut);margin-top:14px}
   .fade{opacity:.4;pointer-events:none}
   .result{margin-top:22px}
-  .banner{display:flex;align-items:center;gap:10px;background:#12261a;border:1px solid #1e3a26;
-    color:#c6f0d0;border-radius:10px;padding:12px 14px;font-size:14px;flex-wrap:wrap}
-  .banner.err{background:#2a1417;border-color:#5c2126;color:#f3c2c6}
+  .banner{display:flex;align-items:center;gap:10px;background:var(--ok-bg);border:1px solid var(--ok-line);
+    color:var(--ok-fg);border-radius:10px;padding:12px 14px;font-size:14px;flex-wrap:wrap}
+  .banner.err{background:var(--err-bg);border-color:var(--err-line);color:var(--err-fg)}
   .big{font-size:15px;font-weight:700}
   table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
   th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
   th{color:var(--mut);font-weight:600}
   td.num{font-variant-numeric:tabular-nums}
-  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;background:#1c2431;color:var(--mut)}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;background:var(--chip);color:var(--mut)}
   .tag.fb{background:#2a230f;color:var(--warn)}
   .tag.color{background:#182a3a;color:#7fc0ff}
   .tag.gray{background:#22262e;color:#b9c0cc}
@@ -67,18 +102,18 @@
     border-radius:9px;padding:11px 18px;font:inherit;font-weight:600;cursor:pointer;
     text-decoration:none;line-height:1.2;white-space:nowrap;vertical-align:middle}
   .btn:hover{background:var(--accent)}
-  .btn:disabled{background:#2a2f3a;cursor:not-allowed}
+  .btn:disabled{background:var(--disabled);color:var(--mut);cursor:not-allowed}
   .spin{width:16px;height:16px;border:2px solid #ffffff40;border-top-color:#fff;border-radius:50%;
     display:inline-block;animation:s .7s linear infinite;vertical-align:-3px}
   @keyframes s{to{transform:rotate(360deg)}}
-  code{background:#0e1219;padding:1px 6px;border-radius:5px}
+  code{background:var(--input);padding:1px 6px;border-radius:5px}
   ul.files{list-style:none;padding:0;margin:14px 0 0}
   ul.files li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);
     border-radius:8px;margin-bottom:6px;font-size:13px}
   ul.files li .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  ul.files li button{background:#0e1219;border:1px solid var(--line);color:var(--mut);
+  ul.files li button{background:var(--input);border:1px solid var(--line);color:var(--mut);
     border-radius:6px;cursor:pointer;padding:3px 8px;font:inherit}
-  .viewer{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0e1219}
+  .viewer{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel)}
   .viewer-bar{display:flex;align-items:center;justify-content:space-between;
     padding:10px 14px;border-bottom:1px solid var(--line)}
   .viewer-title{font-size:13px;color:var(--mut);font-weight:600}
@@ -86,14 +121,14 @@
   .viewer-empty{display:flex;align-items:center;justify-content:center;height:520px;
     color:var(--mut);font-size:14px}
   .docbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    background:#0e1219;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
   .docinfo{display:flex;align-items:center;gap:12px;min-width:0;flex-wrap:wrap}
   .docname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px}
-  .steps{font-size:12px;color:#7fc0ff;background:#12233d;border:1px solid #1e3a5c;
+  .steps{font-size:12px;color:var(--steps-fg);background:var(--steps-bg);border:1px solid var(--steps-line);
     border-radius:20px;padding:2px 10px}
   .docactions{display:flex;gap:8px}
-  .btn.ghost{margin-top:0;background:#171a21;border:1px solid var(--line)}
-  .btn.ghost:hover{background:#1a2740}
+  .btn.ghost{margin-top:0;background:var(--card);color:var(--fg);border:1px solid var(--line)}
+  .btn.ghost:hover{background:var(--tab-on);color:var(--tab-on-fg)}
   .chk.combo{margin:16px 0 2px}
 </style>
 </head>
@@ -103,6 +138,49 @@
 const {useState, useCallback, useRef, useEffect} = React;
 const MB = b => (b/1e6).toFixed(2)+" MB";
 const fmtDate = iso => { try{ return new Date(iso).toLocaleString(); }catch(_){ return iso; } };
+
+// Inline line-icons (inherit currentColor, so they theme automatically).
+function Icon({name,size=16}){
+  const paths={
+    deskew:<><path d="M21 12a9 9 0 1 1-3.2-6.9"/><polyline points="21 3 21 9 15 9"/></>,
+    compress:<><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></>,
+    merge:<><path d="M7 3v4.5l5 4 5-4V3"/><line x1="12" y1="11.5" x2="12" y2="21"/></>,
+    history:<><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></>,
+    sun:<><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4.5"/><line x1="12" y1="19.5" x2="12" y2="22"/><line x1="4.2" y1="4.2" x2="6" y2="6"/><line x1="18" y1="18" x2="19.8" y2="19.8"/><line x1="2" y1="12" x2="4.5" y2="12"/><line x1="19.5" y1="12" x2="22" y2="12"/><line x1="4.2" y1="19.8" x2="6" y2="18"/><line x1="18" y1="6" x2="19.8" y2="4.2"/></>,
+    moon:<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{flex:"none"}}>{paths[name]}</svg>;
+}
+
+function Logo(){
+  return (
+    <svg className="logo" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="44" height="44" rx="11" fill="#2563eb"/>
+      <g transform="rotate(9 24 25)">
+        <rect x="15" y="11" width="20" height="27" rx="2.5" fill="#fff"/>
+        <rect x="18.5" y="16" width="12" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="20" width="13.5" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="24" width="10" height="2" rx="1" fill="#94a3b8"/>
+        <rect x="18.5" y="28" width="12.5" height="2" rx="1" fill="#94a3b8"/>
+      </g>
+      <path d="M31 30a7 7 0 1 1-2.2-5.1" fill="none" stroke="#facc15" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M29.5 21.5l.8 4.7 4-2z" fill="#facc15"/>
+    </svg>
+  );
+}
+
+function useTheme(){
+  const [theme,setTheme]=useState(()=>{
+    try{ const s=localStorage.getItem("pdfbench-theme"); if(s==="light"||s==="dark") return s; }catch(_){}
+    try{ return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light":"dark"; }catch(_){ return "dark"; }
+  });
+  useEffect(()=>{
+    document.documentElement.setAttribute("data-theme",theme);
+    try{ localStorage.setItem("pdfbench-theme",theme); }catch(_){}
+  },[theme]);
+  return [theme,setTheme];
+}
 
 // Pull a useful message out of a failed response (handles empty statusText on
 // HTTP/2, non-JSON error bodies from the proxy, and OOM/timeout cases).
@@ -229,18 +307,22 @@ function DocBar({doc, onDownload, onClear, busy}){
 // options). The checkbox is the single source of truth for what runs, so the
 // tab bar is a one-glance view of the selected pipeline. New single-file tools
 // (encrypt, sign, …) are added as more OpTabs.
-function OpTab({id,label,active,checked,onView,onToggle}){
+function OpTab({id,label,icon,active,checked,onView,onToggle}){
   return (
     <div className={"tab op"+(active?" on":"")+(checked?" sel":"")} onClick={()=>onView(id)}>
       <input type="checkbox" checked={checked}
         onClick={e=>e.stopPropagation()} onChange={()=>onToggle(id)}/>
-      <span>{label}</span>
+      <Icon name={icon}/><span>{label}</span>
     </div>
   );
 }
 // A plain navigation tab (Merge, History) — not part of the single-file pipeline.
-function NavTab({id,label,active,onView}){
-  return <div className={"tab"+(active?" on":"")} onClick={()=>onView(id)}>{label}</div>;
+function NavTab({id,label,icon,active,onView,variant}){
+  return (
+    <div className={"tab"+(variant?" "+variant:"")+(active?" on":"")} onClick={()=>onView(id)}>
+      <Icon name={icon}/><span>{label}</span>
+    </div>
+  );
 }
 
 // The single-file workspace: shows the viewed operation's controls and one Run
@@ -415,8 +497,8 @@ function HistoryTab(){
           <div className="opt">Space saved<span style={{color:"var(--ok)",fontWeight:700,fontSize:18}}>{s?MB(s.saved_bytes):"—"}</span></div>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          <button className="btn" style={{marginTop:0,background:"#0e1219",border:"1px solid var(--line)"}} onClick={load}>Refresh</button>
-          <button className="btn" style={{marginTop:0,background:"#2a1417",border:"1px solid #5c2126"}} onClick={clear} disabled={!s||!s.count}>Clear log</button>
+          <button className="btn ghost" style={{marginTop:0}} onClick={load}>Refresh</button>
+          <button className="btn" style={{marginTop:0,background:"var(--err-bg)",color:"var(--err-fg)",border:"1px solid var(--err-line)"}} onClick={clear} disabled={!s||!s.count}>Clear log</button>
         </div>
       </div>
 
@@ -450,6 +532,7 @@ function HistoryTab(){
 }
 
 function App(){
+  const [theme,setTheme]=useTheme();
   const [tab,setTab]=useState("deskew");            // which panel is viewed
   const [ops,setOps]=useState({deskew:true,compress:false}); // pipeline selection
   const [doc,setDoc]=useState(null);                // {file, baseName, steps:[]}
@@ -527,13 +610,25 @@ function App(){
 
   return (
     <div className="wrap">
-      <h1>PDF Bench</h1>
-      <p className="sub">A local toolbox to deskew, compress and merge your PDFs.</p>
+      <div className="head">
+        <div className="brand">
+          <Logo/>
+          <div>
+            <h1>PDF Bench</h1>
+            <p className="sub">A local toolbox to deskew, compress and merge your PDFs.</p>
+          </div>
+        </div>
+        <button className="iconbtn" title={theme==="dark"?"Switch to light mode":"Switch to dark mode"}
+          onClick={()=>setTheme(theme==="dark"?"light":"dark")}>
+          <Icon name={theme==="dark"?"sun":"moon"} size={18}/>
+        </button>
+      </div>
       <div className="tabs">
-        <OpTab id="deskew" label="Deskew" active={tab==="deskew"} checked={ops.deskew} onView={setTab} onToggle={toggleOp}/>
-        <OpTab id="compress" label="Compress" active={tab==="compress"} checked={ops.compress} onView={setTab} onToggle={toggleOp}/>
-        <NavTab id="merge" label="Merge" active={tab==="merge"} onView={setTab}/>
-        <NavTab id="history" label="History" active={tab==="history"} onView={setTab}/>
+        <OpTab id="deskew" label="Deskew" icon="deskew" active={tab==="deskew"} checked={ops.deskew} onView={setTab} onToggle={toggleOp}/>
+        <OpTab id="compress" label="Compress" icon="compress" active={tab==="compress"} checked={ops.compress} onView={setTab} onToggle={toggleOp}/>
+        <NavTab id="merge" label="Merge" icon="merge" active={tab==="merge"} onView={setTab}/>
+        <div className="tabspacer"></div>
+        <NavTab id="history" label="History" icon="history" variant="log" active={tab==="history"} onView={setTab}/>
       </div>
       {tab==="history"
         ? <HistoryTab/>
