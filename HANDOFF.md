@@ -31,7 +31,7 @@ into a real installer and app:
 - Keep it a single downloadable artifact that a non-technical teammate can
   install with no Python and no setup.
 
-**Repo:** `https://github.com/akshat-kadam-nc/DeskewPDF` (private, branch
+**Repo:** `https://github.com/akshat-kadam-nc/PDFBench` (public, branch
 `master`). Clone it, then `run.bat` sets up a `.venv` and launches the app at
 `http://localhost:8765`. Requires Python 3.11 + Git installed.
 
