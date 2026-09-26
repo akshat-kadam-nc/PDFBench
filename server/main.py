@@ -12,6 +12,7 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from .version import __version__
 from .deskew_core import Options as DeskewOptions, deskew_pdf_bytes
 from .compress_core import CompressOptions, compress_pdf_bytes
 from .merge_core import merge_pdfs
@@ -34,7 +35,7 @@ else:
 # Guard rails
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "80"))
 
-app = FastAPI(title="PDF Bench")
+app = FastAPI(title="PDF Bench", version=__version__)
 
 
 def _peak_mem_mb() -> float | None:
@@ -237,7 +238,7 @@ async def organize_ep(file: UploadFile = File(...), ops: str = Form(...)):
 
 @app.get("/healthz")
 async def healthz():
-    return {"status": "ok", "max_upload_mb": MAX_UPLOAD_MB}
+    return {"status": "ok", "max_upload_mb": MAX_UPLOAD_MB, "version": __version__}
 
 
 @app.get("/api/history")

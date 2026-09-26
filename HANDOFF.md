@@ -69,6 +69,16 @@ into a real installer and app:
   `sys._MEIPASS` when frozen. Next step is packaging this into a real installer
   (see PRIMARY GOAL above).
 
+**Version & release:** Current version **1.1.0**. The version lives in
+`server/version.py` (`__version__`), mirrored in `installer/PDFBench.iss`
+(`AppVersion`), with a `CHANGELOG.md` entry, and shown in the app header +
+`/healthz`. Release steps: bump both, add a CHANGELOG entry, rebuild
+(`build_exe.bat` → installer), tag the commit `vX.Y.Z`, and cut a GitHub
+release with `installer\Output\PDFBench-Setup.exe`. The installer is unsigned
+(SmartScreen once). Current 1.1.0 installer SHA-256:
+`ce979a34b910c3e737305318eeb5b4887c874d530351c18a2c22df9a4bc1d9a0` (regenerate
+after any rebuild).
+
 **Not in git (regenerate, don't copy):** `.venv/`, `build/`, `dist/`, `*.spec`,
 `__pycache__/`. Also the test PDF isn't in the repo.
 

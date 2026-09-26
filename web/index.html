@@ -126,6 +126,7 @@
   .docname{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:380px}
   .steps{font-size:12px;color:var(--steps-fg);background:var(--steps-bg);border:1px solid var(--steps-line);
     border-radius:20px;padding:2px 10px}
+  .ver{font-size:12px;font-weight:600;color:var(--mut);vertical-align:middle;margin-left:6px}
   .docactions{display:flex;gap:8px}
   .btn.ghost{margin-top:0;background:var(--card);color:var(--fg);border:1px solid var(--line)}
   .btn.ghost:hover{background:var(--tab-on);color:var(--tab-on-fg)}
@@ -714,6 +715,8 @@ function OrganizeTab({doc, pick, applyResult, download, clear}){
 
 function App(){
   const [theme,setTheme]=useTheme();
+  const [version,setVersion]=useState(null);
+  useEffect(()=>{fetch("/healthz").then(r=>r.json()).then(d=>setVersion(d.version)).catch(()=>{});},[]);
   const [tab,setTab]=useState("deskew");            // which panel is viewed
   const [ops,setOps]=useState({deskew:true,compress:false}); // pipeline selection
   const [doc,setDoc]=useState(null);                // {file, baseName, steps:[]}
@@ -795,7 +798,7 @@ function App(){
         <div className="brand">
           <Logo/>
           <div>
-            <h1>PDF Bench</h1>
+            <h1>PDF Bench {version&&<span className="ver">v{version}</span>}</h1>
             <p className="sub">A local toolbox to deskew, compress and merge your PDFs.</p>
           </div>
         </div>

@@ -8,7 +8,8 @@
 ; choose an all-users install if they have admin rights.
 
 #define AppName "PDF Bench"
-#define AppVersion "1.0.0"
+; Keep in sync with server/version.py (__version__) and CHANGELOG.md.
+#define AppVersion "1.1.0"
 #define AppPublisher "Next Platforms"
 #define AppExeName "PDFBench.exe"
 #define AppDirName "PDFBench"
