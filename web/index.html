@@ -486,10 +486,51 @@ function MergeTab({onResult}){
   );
 }
 
+// Expanded per-page breakdown for a logged process job (deskew and/or compress).
+function HistoryDetail({detail}){
+  const ds=detail.deskew, cp=detail.compress, o=ds&&ds.options, co=cp&&cp.options;
+  return (
+    <div style={{padding:"12px 14px"}}>
+      {ds && <>
+        <div className="hint" style={{marginTop:0,marginBottom:8}}>
+          Deskew · mode <b>{o?o.mode:"—"}</b>
+          {o&&<> · base {o.base}° · clamp {o.min_mag}–{o.max_mag}° · measured at {o.dpi} DPI</>}
+        </div>
+        {ds.pages && <table>
+          <thead><tr><th>Page</th><th>Parity</th><th className="num">Measured</th><th className="num">Applied</th><th>Method</th></tr></thead>
+          <tbody>
+            {ds.pages.map(p=><tr key={p.page}>
+              <td className="num">{p.page}</td>
+              <td>{p.parity}</td>
+              <td className="num">{p.measured==null?"—":p.measured.toFixed(2)+"°"}</td>
+              <td className="num">{p.applied>=0?"+":""}{Number(p.applied).toFixed(2)}°</td>
+              <td><span className={"tag"+(String(p.reason).startsWith("fallback")?" fb":"")}>{p.reason}</span></td>
+            </tr>)}
+          </tbody>
+        </table>}
+      </>}
+      {cp && <>
+        <div className="hint" style={{marginBottom:8,marginTop:ds?16:0}}>
+          Compress · {co&&<>{co.dpi} DPI · quality {co.quality_color}/{co.quality_gray} · {co.color_mode}</>}
+          {typeof cp.color_pages==="number"&&<> · {cp.color_pages} color / {cp.gray_pages} gray</>}
+        </div>
+        {cp.pages && <table>
+          <thead><tr><th>Page</th><th>Mode</th></tr></thead>
+          <tbody>
+            {cp.pages.map(p=><tr key={p.page}><td className="num">{p.page}</td><td><span className={"tag "+p.mode}>{p.mode}</span></td></tr>)}
+          </tbody>
+        </table>}
+      </>}
+    </div>
+  );
+}
+
 function HistoryTab(){
   const [data,setData]=useState(null);
   const [err,setErr]=useState(null);
   const [loading,setLoading]=useState(true);
+  const [expanded,setExpanded]=useState(()=>new Set());
+  const toggle=useCallback(id=>setExpanded(p=>{const n=new Set(p);n.has(id)?n.delete(id):n.add(id);return n;}),[]);
 
   const load=useCallback(async()=>{
     setLoading(true);setErr(null);
@@ -537,14 +578,23 @@ function HistoryTab(){
               const pct=it.in_bytes?Math.round(it.out_bytes/it.in_bytes*100):100;
               const saved=(it.in_bytes||0)-(it.out_bytes||0);
               const label=it.op==="merge"?("merge ("+(it.inputs?it.inputs.length:0)+")"):(it.steps?it.steps.join("+"):"process");
-              return <tr key={it.id}>
-                <td style={{whiteSpace:"nowrap",color:"var(--mut)"}}>{fmtDate(it.at)}</td>
+              const hasDetail=!!(it.detail&&(it.detail.deskew||it.detail.compress));
+              const open=expanded.has(it.id);
+              return <React.Fragment key={it.id}>
+                <tr onClick={hasDetail?()=>toggle(it.id):undefined}
+                    style={{cursor:hasDetail?"pointer":"default"}}
+                    title={hasDetail?(open?"Hide page details":"Show page details"):undefined}>
+                <td style={{whiteSpace:"nowrap",color:"var(--mut)"}}>
+                  <span style={{display:"inline-block",width:14,color:"var(--accent)"}}>{hasDetail?(open?"▾":"▸"):""}</span>
+                  {fmtDate(it.at)}</td>
                 <td><span className={"tag"+(it.op==="merge"?" color":"")}>{label}</span></td>
                 <td style={{maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={(it.inputs||[]).join(", ")}>{it.name}</td>
                 <td className="num">{it.pages??"—"}</td>
                 <td className="num">{MB(it.in_bytes||0)} → {MB(it.out_bytes||0)} <span style={{color:"var(--mut)"}}>({pct}%)</span></td>
                 <td className="num" style={{color:saved>0?"var(--ok)":"var(--mut)"}}>{saved>0?MB(saved):"—"}</td>
-              </tr>;
+              </tr>
+              {open&&hasDetail&&<tr><td colSpan={6} style={{background:"var(--panel)",padding:0}}><HistoryDetail detail={it.detail}/></td></tr>}
+              </React.Fragment>;
             })}
           </tbody>
         </table>}

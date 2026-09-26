@@ -151,9 +151,19 @@ async def process(
     stem = os.path.splitext(os.path.basename(file.filename))[0]
     out_name = f"{stem}_{'_'.join(report['steps'])}.pdf"
     pages = ((report.get("deskew") or report.get("compress") or {}).get("page_count"))
+    # Persist the per-page breakdown so History can show exactly what was applied.
+    detail: dict = {}
+    if report.get("deskew"):
+        d = report["deskew"]
+        detail["deskew"] = {"options": d.get("options"), "pages": d.get("pages")}
+    if report.get("compress"):
+        c = report["compress"]
+        detail["compress"] = {"options": c.get("options"), "pages": c.get("pages"),
+                              "color_pages": c.get("color_pages"), "gray_pages": c.get("gray_pages")}
     history.record({"op": "process", "name": out_name, "inputs": [file.filename],
                     "steps": report["steps"], "pages": pages,
-                    "in_bytes": in_bytes, "out_bytes": len(data)})
+                    "in_bytes": in_bytes, "out_bytes": len(data),
+                    **({"detail": detail} if detail else {})})
     return _pdf_response(data, out_name, report)
 
 
